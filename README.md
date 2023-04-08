@@ -31,3 +31,8 @@ The title is inferred as follows:
 Runs on file rename and when a file is saved.
 
 Disclaimer: I just learned how to make Obsidian plugins a few hours ago, so there's going to be some bugs.
+
+## To do:
+
+* [ ] Add a command to run across an entire vault.
+* [ ] Test behaviour with related plugins: https://github.com/dy-sh/obsidian-consistent-attachments-and-links etc
