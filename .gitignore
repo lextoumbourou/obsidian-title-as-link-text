@@ -3,15 +3,3 @@ node_modules
 # IDE / Editor files
 .vscode/
 .idea/
-
-# Compiled TypeScript files
-*.tsbuildinfo
-**/*.js
-**/*.d.ts
-**/*.js.map
-
-# Ignore TypeScript generated files
-**/*.js
-**/*.jsx
-**/*.d.ts
-**/*.js.map
