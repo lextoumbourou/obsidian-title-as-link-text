@@ -1,38 +1,67 @@
-# Obsidian Plugin: Title As Link Text
+# Title As Link Text
 
-For people using Markdown links (**[[Wikilinks]]** to **Off**), the `[Link Text]` component of a Markdown url is set based on the title of the link's page.
+**WARNING: this software has not been tested thoroughly. Do not use it without a backup of your vault.**
 
-```
-[Some Title][a-different-filename.md]
-```
+This [Obsidian](https://obsidian.md/) plugin adds some missing functionality for Markdown-style links (i.e. `[[Wikilinks]]` are turned off), allowing the `[Link Text]` component of a Markdown url to be set based on the page's title.
 
-This is useful for people that do not want to use page titles as file names. For example:
+Useful for traditional Zettelkasten-style ID: **20230408102501.md** and to allow special characters in page title's.
 
-**some-idea.md**
+## Example
+
+**doc1.md**
 ```
 ---
-title: Some Idea
+title: Doc 1
 ---
+
+See also [Doc 2 - Some Long Title](doc2.md)
 ```
 
-Especially useful for people using traditional Zettelkasten-style ID.
+**doc2.md**
+```
+----
+title: Doc 2 - Some Long Title
+---
 
-**20230408102501.md**
+See also [Doc 1](doc1.md)
 ```
-# Some Idea
-```
+
+## Installation
+
+Installation via BRAT (for pre-releases or betas)
+
+* Install [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+* Add "Title As Link Text" to BRAT:
+    * Open "Obsidian42 - BRAT" via Settings → Community Plugins
+    * Click "Add Beta plugin"
+    * Use the repository address `lextoumbourou/obsidian-title-as-link-text`
+    * Enable "Title As Link Text" under Settings → Options → Community Plugins
+
+## How It Works
+
+Runs when a file is renamed or saved. The vault is searched for back references and they're updated based on title of the file.
 
 The title is inferred as follows:
 
-1. Look for `title` in front matter.
-2. Use the first `# Heading` on the page.
-3. Use the file name.
+1. Look for `title` in front matter:
 
-Runs on file rename and when a file is saved.
+```
+---
+title: Title
+---
+```
+
+2. Use the first `# Heading` on the page.
+
+```
+# Title
+```
+
+3. Use the file name.
 
 Disclaimer: I just learned how to make Obsidian plugins a few hours ago, so there's going to be some bugs.
 
-## To do:
+## To Do
 
-* [ ] Add a command to run across an entire vault.
-* [ ] Test behaviour with related plugins: https://github.com/dy-sh/obsidian-consistent-attachments-and-links etc
+* [ ] Add command to process a Vault.
+* [ ] Much more testing.
