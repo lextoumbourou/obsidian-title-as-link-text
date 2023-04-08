@@ -1,11 +1,11 @@
 {
-	"id": "better-markdown-links",
-	"name": "Better Markdown links",
+	"id": "obsidian-title-as-link-text",
+	"name": "Title As Link Text",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "This plugin improves the behaviour of Markdown-style links in Obsidian.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
+	"author": "Lex Toumbourou",
+	"authorUrl": "https://notesbylex.com",
 	"fundingUrl": "https://obsidian.md/pricing",
 	"isDesktopOnly": false
 }
