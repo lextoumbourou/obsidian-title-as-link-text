@@ -1,0 +1,11 @@
+{
+	"id": "better-markdown-links",
+	"name": "Better Markdown links",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "This plugin improves the behaviour of Markdown-style links in Obsidian.",
+	"author": "Obsidian",
+	"authorUrl": "https://obsidian.md",
+	"fundingUrl": "https://obsidian.md/pricing",
+	"isDesktopOnly": false
+}
