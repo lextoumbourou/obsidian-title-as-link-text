@@ -1,25 +1,33 @@
-# Better Markdown Links
+# Obsidian Plugin: Title As Link Text
 
-An Obsidian plugin for people using Markdown links (**[[Wikilinks]]** to **Off**) that allows for using either front mattter or a heading, instead of the file name when maintain linking.
-
-Normally in Obsidian, Markdown links have the following format:
-
-[Some Idea](Some Idea.md)
-
-When the `Some Idea.md` file is renamed, the link is updated:
-
-Some Idea.md -> Some Other Idea.md
-
-`[Some Idea](Some Idea.md)` -> `[Some Other Idea](Some Other Idea.md)`
-
-But, if you prefer to keep the filename separate from the page's title:
+For people using Markdown links (**[[Wikilinks]]** to **Off**), the `[Link Text]` component of a Markdown url is set based on the title of the link's page.
 
 ```
-cat some-idea.md
+[Some Title][a-different-filename.md]
+```
+
+This is useful for people that do not want to use page titles as file names. For example:
+
+**some-idea.md**
+```
 ---
 title: Some Idea
 ---
 ```
-It would be preferrable if the [link text] part of a url could be set using a page's front matter or using the first `# Heading` on the page.
 
-This plugin intercepts the link updating functionality of Obsidian, and uses the page title for the link text page of a Markdown link, and the filename for the URL part.
+Especially useful for people using traditional Zettelkasten-style ID.
+
+**20230408102501.md**
+```
+# Some Idea
+```
+
+The title is inferred as follows:
+
+1. Look for `title` in front matter.
+2. Use the first `# Heading` on the page.
+3. Use the file name.
+
+Runs on file rename and when a file is saved.
+
+Disclaimer: I just learned how to make Obsidian plugins a few hours ago, so there's going to be some bugs.

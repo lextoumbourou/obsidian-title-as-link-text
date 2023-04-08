@@ -1,106 +1,109 @@
 import {
-	Plugin,
-	TFile,
-	debounce,
-	Notice,
-	MarkdownView,
-	CachedMetadata,
-	Editor,
-  } from 'obsidian';
+  Plugin,
+  HeadingCache,
+  FrontMatterCache,
+  CachedMetadata,
+  TFile,
+  Notice
+} from "obsidian";
 
-  // Remember to rename these classes and interfaces!
+interface BetterMarkdownLinksSettings {}
 
-interface BetterMarkdownLinksSettings {
-}
-  
-  export default class BetterMarkdownLinksPlugin extends Plugin {
-	settings: BetterMarkdownLinksSettings;
+export default class BetterMarkdownLinksPlugin extends Plugin {
+  settings: BetterMarkdownLinksSettings;
 
-	private updateLinks: ((file: TFile) => Promise<void>) | ReturnType<typeof debounce>;
-  
-	async onload() {
-	  this.updateLinks = debounce(this.updateLinksImpl.bind(this), 500, true);
-  
-	  this.registerEvent(
-		this.app.workspace.on('file-open', (file: TFile) => {
-			if (file) {
-				this.updateLinks(file);
+  async onload() {
+    this.registerEvent(
+      this.app.vault.on("rename", async (file: TFile, oldPath) => {
+        this.updateBackLinks(file, oldPath);
+      })
+    );
+
+    this.registerEvent(
+      this.app.metadataCache.on("changed", async (file: TFile) => {
+        this.updateBackLinks(file, file.path);
+      })
+    );
+  }
+
+  async updateBackLinks(file: TFile, oldPath: string) {
+      if (
+        !oldPath ||
+        !file.path.toLocaleLowerCase().endsWith(".md") ||
+        !(file instanceof TFile)
+      ) {
+        return;
+      }
+
+      const cachedFile = this.app.metadataCache.getFileCache(file);
+      if (!cachedFile) {
+        return;
+      }
+      const title = this.getPageTitle(cachedFile);
+      const notes = this.getCachedNotesThatHaveLinkToFile(oldPath)
+
+      let updatedBacklinksCount = 0;
+
+      for (let note of notes) {
+        const fileContent = await this.app.vault.read(note);
+        const newFileContent = fileContent.replace(
+          /\[(.*?)\]\((.*?)\)/g,
+          (_, linkText, linkUrl) => {
+            linkUrl = decodeURIComponent(linkUrl);
+            if (linkUrl === oldPath) {
+              return `[${title}](${encodeURIComponent(file.path)})`;
+            }
+            return `[${linkText}](${linkUrl})`;
+          }
+        );
+        
+        if (fileContent !== newFileContent) {
+          await this.app.vault.modify(note, newFileContent);
+          updatedBacklinksCount++;
+        }
+      }
+
+      if (updatedBacklinksCount > 0) {
+        new Notice(`${updatedBacklinksCount} backlink(s) updated.`);
+      };
+  };
+
+  getCachedNotesThatHaveLinkToFile(filePath: string): TFile[] {
+		let notes: TFile [] = [];
+		let allNotes = this.app.vault.getMarkdownFiles();
+
+		if (allNotes) {
+			for (let note of allNotes) {
+				let notePath = note.path;
+				if (note.path == filePath)
+					continue;
+
+				let embeds = this.app.metadataCache.getCache(notePath)?.embeds;
+				if (embeds) {
+					for (let link_data of embeds) {
+            if (link_data.link == filePath) {
+              notes.push(note);
+            }
+					}
+				}
+
+				let links = this.app.metadataCache.getCache(notePath)?.links;
+				if (links) {
+					for (let link_data of links) {
+            if (link_data.link == filePath) {
+              notes.push(note);
+            }
+					}
+				}
 			}
-		})
-	  );
-  
-	  this.registerEvent(
-		this.app.vault.on('rename', (_, newPath) => {
-		  const newFile = this.app.vault.getAbstractFileByPath(newPath) as TFile;
-		  if (newFile) {
-			this.updateLinks(newFile);
-		  }
-		})
-	  );
-  
-	  this.registerEvent(
-		this.app.metadataCache.on('changed', (file) => {
-		  this.updateLinks(file);
-		})
-	  );
+		}
+
+		return notes;
 	}
-  
-	async updateLinksImpl(file: TFile) {
-	  if (file.extension !== 'md') {
-		return;
-	  }
-  
-	  const cache = this.app.metadataCache.getFileCache(file)
-  
-	  if (!cache) {
-		return;
-	  }
-  
-	  const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-	  if (!view || view.file !== file) {
-		return;
-	  }
-  
-	  const editor = view.editor;
-	  const title = getTitle(cache);
-	  const oldLink = getOldLink(editor);
-  
-	  if (title && oldLink) {
-		const newLink = `[${title}](${file.basename})`;
-		editor.replaceRange(newLink, oldLink.from, oldLink.to);
-		new Notice('Markdown link updated.');
-	  }
-	}
+
+  getPageTitle(cache: CachedMetadata): string {
+    const frontMatterTitle = cache.frontmatter && (cache.frontmatter as FrontMatterCache).title;
+    const firstHeading = cache.headings && (cache.headings[0] as HeadingCache).heading;
+    return frontMatterTitle || firstHeading || "";
   }
-  
-  function getTitle(cache: CachedMetadata) {
-	const frontMatterTitle = cache.frontmatter && cache.frontmatter['title'];
-	const firstHeader = cache.headings && cache.headings[0];
-  
-	if (frontMatterTitle) {
-	  return frontMatterTitle;
-	} else if (firstHeader) {
-	  return firstHeader.heading;
-	} else {
-	  return null;
-	}
-  }
-  
-  function getOldLink(editor: Editor) {
-	const cursor = editor.getCursor();
-	const line = editor.getLine(cursor.line);
-  
-	const markdownLinkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
-	let match;
-  
-	while ((match = markdownLinkRegex.exec(line)) !== null) {
-	  const from = { line: cursor.line, ch: match.index };
-	  const to = { line: cursor.line, ch: match.index + match[0].length };
-  
-	  if (cursor.ch >= from.ch && cursor.ch <= to.ch) {
-		return { from, to };
-	  }
-	}
-  
-	return null;
-  }
+}
