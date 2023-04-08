@@ -32,10 +32,10 @@ Installation via BRAT (for pre-releases or betas)
 
 * Install [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 * Add "Title As Link Text" to BRAT:
-    * Open "Obsidian42 - BRAT" via Settings → Community Plugins
-    * Click "Add Beta plugin"
-    * Use the repository address `lextoumbourou/obsidian-title-as-link-text`
-    * Enable "Title As Link Text" under Settings → Options → Community Plugins
+  * Open "Obsidian42 - BRAT" via Settings → Community Plugins
+  * Click "Add Beta plugin"
+  * Use the repository address `lextoumbourou/obsidian-title-as-link-text`
+  * Enable "Title As Link Text" under Settings → Options → Community Plugins
 
 ## How It Works
 
@@ -51,7 +51,7 @@ title: Title
 ---
 ```
 
-2. Use the first `# Heading` on the page.
+2. Use the first `# H1` on the page.
 
 ```
 # Title
