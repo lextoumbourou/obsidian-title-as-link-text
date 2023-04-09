@@ -7,6 +7,9 @@ import {
   Notice
 } from "obsidian";
 
+
+const path = require("path");
+
 interface BetterMarkdownLinksSettings {}
 
 export default class BetterMarkdownLinksPlugin extends Plugin {
@@ -42,6 +45,10 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
       const title = this.getPageTitle(cachedFile);
       const notes = this.getCachedNotesThatHaveLinkToFile(oldPath)
 
+      if (notes.length == 0) {
+        return
+      }
+
       let updatedBacklinksCount = 0;
 
       for (let note of notes) {
@@ -50,8 +57,8 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
           /\[(.*?)\]\((.*?)\)/g,
           (_, linkText, linkUrl) => {
             linkUrl = decodeURIComponent(linkUrl);
-            if (linkUrl === oldPath) {
-              return `[${title}](${encodeURIComponent(file.path)})`;
+            if (path.basename(linkUrl) === path.basename(oldPath)) {
+              return `[${title}](${this.normalizePathForLink(file.path)})`;
             }
             return `[${linkText}](${linkUrl})`;
           }
@@ -75,13 +82,16 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
 		if (allNotes) {
 			for (let note of allNotes) {
 				let notePath = note.path;
-				if (note.path == filePath)
+
+				if (note.path == filePath) {
 					continue;
+        }
 
 				let embeds = this.app.metadataCache.getCache(notePath)?.embeds;
 				if (embeds) {
 					for (let link_data of embeds) {
-            if (link_data.link == filePath) {
+            let linkPath = link_data.link;
+            if (path.basename(linkPath) == path.basename(filePath)) {
               notes.push(note);
             }
 					}
@@ -90,7 +100,11 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
 				let links = this.app.metadataCache.getCache(notePath)?.links;
 				if (links) {
 					for (let link_data of links) {
-            if (link_data.link == filePath) {
+            let linkPath = link_data.link;
+            let linkBasePath = path.basename(linkPath);
+            let filePathBasePath = path.basename(filePath);
+
+            if (linkBasePath == filePathBasePath) {
               notes.push(note);
             }
 					}
@@ -106,4 +120,10 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
     const firstHeading = cache.headings && (cache.headings[0] as HeadingCache).heading;
     return frontMatterTitle || firstHeading || "";
   }
+
+  normalizePathForLink(path: string): string {
+		path = path.replace(/\\/gi, "/"); //replace \ to /
+		path = path.replace(/ /gi, "%20"); //replace space to %20
+		return path;
+	}
 }
