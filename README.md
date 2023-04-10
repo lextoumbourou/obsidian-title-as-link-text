@@ -1,30 +1,27 @@
 # Title As Link Text
 
-**WARNING: this software has not been tested thoroughly. Do not use it without a backup of your vault.**
 
-This [Obsidian](https://obsidian.md/) plugin adds some missing functionality for Markdown-style links (i.e. `[[Wikilinks]]` are turned off), allowing the `[Link Text]` component of a Markdown url to be set based on the page's title.
+https://user-images.githubusercontent.com/1080552/230809814-ff8bc224-1455-420c-b363-a0d071ff801c.mp4
 
-Useful for traditional Zettelkasten-style ID: **20230408102501.md** and to allow special characters in page title's.
+## WARNING
 
-## Example
+This software is still being tested and will likely mess up your files. **Only use if you have a backup of your vault.**
 
-**doc1.md**
-```
----
-title: Doc 1
----
+## Overview
 
-See also [Doc 2 - Some Long Title](doc2.md)
-```
+Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that automatically updates Markdown-style links with the page's title instead of the file name.
 
-**doc2.md**
-```
-----
-title: Doc 2 - Some Long Title
----
+## Requirements
 
-See also [Doc 1](doc1.md)
-```
+1. `[[Wikilinks]]` are turned off.
+2. I recommend using either `absolute` or `relative` style links for nested file structures.
+
+I also recommend utilising the [Wikilinks To Markdown](https://github.com/agathauy/wikilinks-to-mdlinks-obsidian) plugin to complement this functionality.
+
+## Use cases
+
+* Use traditional Zettelkasten-style IDs for filenames **20230408102501.md**
+* Allow special characters in the page's title that would otherwise not work in the filename (`?`, `,` etc.)
 
 ## Installation
 
@@ -33,35 +30,59 @@ Installation via BRAT (for pre-releases or betas)
 * Install [BRAT](https://github.com/TfTHacker/obsidian42-brat).
 * Add "Title As Link Text" to BRAT:
   * Open "Obsidian42 - BRAT" via Settings → Community Plugins
-  * Click "Add Beta plugin"
+  * Click "Add Beta plugin."
   * Use the repository address `lextoumbourou/obsidian-title-as-link-text`
   * Enable "Title As Link Text" under Settings → Options → Community Plugins
 
 ## How It Works
 
-Runs when a file is renamed or saved. The vault is searched for back references and they're updated based on title of the file.
+### On file save
 
-The title is inferred as follows:
+When a file is updated, the plugin searches for back-references to the file. If the link text in the back reference does not match the note's title, the plugin updates the link text.
 
-1. Look for `title` in front matter:
+### On file rename
 
-```
----
-title: Title
----
-```
+When we rename a file, the plugin searches for back-references to the update. Obsidian will update the URL as standard, and the plugin will update the link text to reflect the new title.
 
-2. Use the first `# H1` on the page.
+### Title inference
 
-```
-# Title
-```
+The plugin infers the title as follows:
 
-3. Use the file name.
+1\. Look for `title` in the frontmatter, if it exists:
 
-Disclaimer: I just learned how to make Obsidian plugins a few hours ago, so there's going to be some bugs.
+* File name: **some-doc.md**
+* File contents
+  ```
+  ---
+  title: Some Doc
+  ---
+  ```
+* Link result: `[Some Doc](./some-doc.md)`
+
+2\. Use the first `# H1` on the page if it exists.
+
+* File name: **path/to/another-doc.md**
+* File contents:
+  ```
+  # Another Doc
+  ```
+* Link result: `[Another Doc](path/to/another-doc.md`
+
+3\. Use the file name.
+
+* File name: **no-title.md**
+* File contents:
+  ```
+  No title in this file.
+  ```
+* Link result: `[no-title](no-title.md)`
+
+## License
+
+MIT
 
 ## To Do
 
 * [ ] Add command to process a Vault.
+* [ ] Add unit tests.
 * [ ] Much more testing.
