@@ -1,6 +1,5 @@
 {
 	"name": "obsidian-title-as-link-text",
-	"version": "1.0.1",
 	"description": "A plugin that provides better Markdown links in Obsidian",
 	"main": "main.js",
 	"scripts": {
