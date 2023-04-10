@@ -16,7 +16,10 @@ Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that automatica
 1. `[[Wikilinks]]` are turned off.
 2. I recommend using either `absolute` or `relative` style links for nested file structures.
 
-I also recommend utilising the [Wikilinks To Markdown](https://github.com/agathauy/wikilinks-to-mdlinks-obsidian) plugin to complement this functionality.
+## Complemantary Plugins
+
+* [Wikilinks To Markdown](https://github.com/agathauy/wikilinks-to-mdlinks-obsidian) to convert existing Wikilinks to Markdown.
+* [Front Matter Title](https://github.com/snezhig/obsidian-front-matter-title) to replace the title with filename throughout Obsidian.
 
 ## Use cases
 
