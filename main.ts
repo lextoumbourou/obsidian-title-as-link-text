@@ -17,13 +17,13 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
   async onload() {
     this.registerEvent(
       this.app.vault.on("rename", async (file: TFile, oldPath) => {
-        this.updateBackLinks(file, oldPath);
+        this.updateBackLinks(file, oldPath, true);
       })
     );
 
     this.registerEvent(
       this.app.metadataCache.on("changed", async (file: TFile) => {
-        this.updateBackLinks(file, file.path);
+        this.updateBackLinks(file, file.path, true);
       })
     );
 
@@ -32,7 +32,6 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
       name: "Update All Links",
       callback: async () => {
         await this.updateAllLinks();
-        new Notice("All links have been updated.");
       },
     });
   }
@@ -40,13 +39,21 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
   async updateAllLinks() {
     const markdownFiles = this.app.vault.getMarkdownFiles();
 
+    var updatedBacklinksCount = 0;
     for (const file of markdownFiles) {
       const oldPath = file.path;
-      await this.updateBackLinks(file, oldPath);
+      const backLinks = await this.updateBackLinks(file, oldPath, false);
+      if (backLinks) {
+        updatedBacklinksCount = backLinks + updatedBacklinksCount;
+      }
     }
+
+    new Notice(
+      `Updated the link text of ${updatedBacklinksCount} Markdown link(s).`
+    );
   }
 
-  async updateBackLinks(file: TFile, oldPath: string) {
+  async updateBackLinks(file: TFile, oldPath: string, notify: boolean) {
     if (
       !oldPath ||
       !file.path.toLocaleLowerCase().endsWith(".md") ||
@@ -93,9 +100,13 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
       }
     }
 
-    if (updatedBacklinksCount > 0) {
-      new Notice(`${updatedBacklinksCount} backlink(s) updated.`);
+    if (notify && updatedBacklinksCount > 0) {
+      new Notice(
+        `Updated the link text of ${updatedBacklinksCount} Markdown link(s).`
+      );
     }
+
+    return updatedBacklinksCount;
   }
 
   getCachedNotesThatHaveLinkToFile(filePath: string): TFile[] {
