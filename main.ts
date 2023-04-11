@@ -9,11 +9,7 @@ import {
 
 const path = require("path");
 
-interface BetterMarkdownLinksSettings {}
-
-export default class BetterMarkdownLinksPlugin extends Plugin {
-  settings: BetterMarkdownLinksSettings;
-
+export default class TitleAsLinkTextPlugin extends Plugin {
   async onload() {
     this.registerEvent(
       this.app.vault.on("rename", async (file: TFile, oldPath) => {
@@ -82,13 +78,7 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
         (_, linkText, linkUrl) => {
           const linkUrlDecoded = decodeURIComponent(linkUrl);
           if (path.basename(linkUrlDecoded) === path.basename(oldPath)) {
-            const normedLink = this.normalizePathForLink(
-              file.path,
-              // @ts-ignore
-              this.app.vault.getConfig("newLinkFormat"),
-              path.dirname(note.path)
-            );
-            return `[${title}](${normedLink})`;
+            return `[${title}](${linkUrl})`;
           }
           return `[${linkText}](${linkUrl})`;
         }
@@ -110,7 +100,7 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
   }
 
   getCachedNotesThatHaveLinkToFile(filePath: string): TFile[] {
-    let notes: TFile[] = [];
+    let notesWithBacklinks: TFile[] = [];
     let allNotes = this.app.vault.getMarkdownFiles();
 
     if (allNotes) {
@@ -121,65 +111,28 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
           continue;
         }
 
-        let embeds = this.app.metadataCache.getCache(notePath)?.embeds;
-        if (embeds) {
-          for (let link_data of embeds) {
-            let linkPath = link_data.link;
-
-            const isSamePath = this.comparePaths(
-              linkPath,
-              filePath,
-              path.dirname(notePath),
-              //@ts-ignore
-              this.app.vault.getConfig("newLinkFormat")
+        const noteCache = this.app.metadataCache.getCache(notePath);
+        const embedsAndLinks = [
+          ...(noteCache?.embeds || []),
+          ...(noteCache?.links || []),
+        ];
+        if (embedsAndLinks) {
+          for (let link_data of embedsAndLinks) {
+            // getFirstLinkpathDest = Get the best match for a linkpath.
+            // https://marcus.se.net/obsidian-plugin-docs/reference/typescript/classes/MetadataCache
+            const firstLinkPath = app.metadataCache.getFirstLinkpathDest(
+              link_data.link,
+              note.path
             );
-            if (isSamePath) {
-              notes.push(note);
-            }
-          }
-        }
-
-        let links = this.app.metadataCache.getCache(notePath)?.links;
-        if (links) {
-          for (let link_data of links) {
-            let linkPath = link_data.link;
-
-            const isSamePath = this.comparePaths(
-              linkPath,
-              filePath,
-              path.dirname(notePath),
-              //@ts-ignore
-              this.app.vault.getConfig("newLinkFormat")
-            );
-            if (isSamePath) {
-              notes.push(note);
+            if (firstLinkPath && firstLinkPath.path == filePath) {
+              notesWithBacklinks.push(note);
             }
           }
         }
       }
     }
 
-    return notes;
-  }
-
-  comparePaths(
-    linkPath: string,
-    filePath: string,
-    linkDir: string,
-    linkFormat: string
-  ) {
-    const basePath = (this.app.vault.adapter as any).basePath;
-
-    filePath = path.resolve(basePath, filePath);
-    linkDir = path.resolve(basePath, linkDir);
-
-    if (linkFormat == "relative") {
-      linkPath = path.resolve(linkDir, linkPath);
-    }
-
-    linkPath = path.resolve(basePath, linkPath);
-
-    return linkPath == filePath;
+    return notesWithBacklinks;
   }
 
   getPageTitle(cache: CachedMetadata, filePath: string): string {
@@ -192,23 +145,5 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
       firstHeading ||
       path.basename(filePath).replace(".md", "")
     );
-  }
-
-  normalizePathForLink(
-    pathToNorm: string,
-    linkFormat: string,
-    noteDir: string
-  ): string {
-    if (linkFormat == "relative") {
-      const basePath = (this.app.vault.adapter as any).basePath;
-      noteDir = path.resolve(basePath, noteDir);
-      pathToNorm = path.resolve(basePath, pathToNorm);
-      pathToNorm = path.relative(noteDir, pathToNorm);
-    }
-
-    pathToNorm = pathToNorm.replace(/\\/gi, "/"); //replace \ to /
-    pathToNorm = pathToNorm.replace(/ /gi, "%20"); //replace space to %20
-
-    return pathToNorm;
   }
 }
