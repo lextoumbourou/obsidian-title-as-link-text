@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-title-as-link-text",
 	"name": "Title As Link Text",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"minAppVersion": "0.15.0",
 	"description": "This plugin improves the behaviour of Markdown-style links in Obsidian.",
 	"author": "Lex Toumbourou",

@@ -73,8 +73,8 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
       const newFileContent = fileContent.replace(
         /\[(.*?)\]\((.*?)\)/g,
         (_, linkText, linkUrl) => {
-          linkUrl = decodeURIComponent(linkUrl);
-          if (path.basename(linkUrl) === path.basename(oldPath)) {
+          const linkUrlDecoded = decodeURIComponent(linkUrl);
+          if (path.basename(linkUrlDecoded) === path.basename(oldPath)) {
             const normedLink = this.normalizePathForLink(
               file.path,
               // @ts-ignore
