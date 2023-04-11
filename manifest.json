@@ -1,9 +1,9 @@
 {
   "id": "obsidian-title-as-link-text",
   "name": "Title As Link Text",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "minAppVersion": "0.15.0",
-  "description": "Use the title as link text for Markdown links.",
+  "description": "Use the title as the link text for Markdown links.",
   "author": "Lex Toumbourou",
   "authorUrl": "https://notesbylex.com",
   "fundingUrl": {

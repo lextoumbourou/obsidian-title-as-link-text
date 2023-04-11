@@ -6,7 +6,7 @@ https://user-images.githubusercontent.com/1080552/230809814-ff8bc224-1455-420c-b
 
 Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that automatically updates Markdown-style links with the page's title instead of the file name.
 
-For this plugin to be useful, use Markdown links by setting off `Use [[Wikilinks]]`.
+For this plugin to be useful, use Markdown links by setting `Use [[Wikilinks]]` to off.
 
 ## Complementary Plugins
 
