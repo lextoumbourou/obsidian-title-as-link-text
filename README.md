@@ -80,6 +80,10 @@ The plugin infers the title as follows:
   ```
 * Link result: `[no-title](no-title.md)`
 
+## Comands
+
+* `Update All Links` can be used to add the title as link text to all existing Markdown links in your vault.
+
 ## License
 
 MIT

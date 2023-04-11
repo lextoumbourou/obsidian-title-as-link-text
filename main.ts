@@ -26,6 +26,24 @@ export default class BetterMarkdownLinksPlugin extends Plugin {
         this.updateBackLinks(file, file.path);
       })
     );
+
+    this.addCommand({
+      id: "update-all-links",
+      name: "Update All Links",
+      callback: async () => {
+        await this.updateAllLinks();
+        new Notice("All links have been updated.");
+      },
+    });
+  }
+
+  async updateAllLinks() {
+    const markdownFiles = this.app.vault.getMarkdownFiles();
+
+    for (const file of markdownFiles) {
+      const oldPath = file.path;
+      await this.updateBackLinks(file, oldPath);
+    }
   }
 
   async updateBackLinks(file: TFile, oldPath: string) {
