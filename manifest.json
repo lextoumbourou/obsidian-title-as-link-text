@@ -1,11 +1,13 @@
 {
-	"id": "obsidian-title-as-link-text",
-	"name": "Title As Link Text",
-	"version": "1.0.5",
-	"minAppVersion": "0.15.0",
-	"description": "This plugin improves the behaviour of Markdown-style links in Obsidian.",
-	"author": "Lex Toumbourou",
-	"authorUrl": "https://notesbylex.com",
-	"fundingUrl": "https://obsidian.md/pricing",
-	"isDesktopOnly": false
+  "id": "obsidian-title-as-link-text",
+  "name": "Title As Link Text",
+  "version": "1.0.6",
+  "minAppVersion": "0.15.0",
+  "description": "Use the title as link text for Markdown links.",
+  "author": "Lex Toumbourou",
+  "authorUrl": "https://notesbylex.com",
+  "fundingUrl": {
+    "Buy Me a Coffee": "https://www.buymeacoffee.com/lext"
+  },
+  "isDesktopOnly": false
 }
