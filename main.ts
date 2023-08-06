@@ -5,20 +5,38 @@ import {
   CachedMetadata,
   TFile,
   Notice,
+  debounce,
+  Debouncer,
 } from "obsidian";
-import { basename } from "path";
+
+function basename(path: string): string {
+  let base = new String(path).substring(path.lastIndexOf("/") + 1);
+  return base;
+}
 
 export default class TitleAsLinkTextPlugin extends Plugin {
+  private debouncedUpdateBackLinks: (
+    file: TFile,
+    oldPath: string,
+    notify: boolean
+  ) => void;
+
   async onload() {
+    this.debouncedUpdateBackLinks = debounce(
+      this.updateBackLinks.bind(this),
+      500,
+      true
+    );
+
     this.registerEvent(
       this.app.vault.on("rename", async (file: TFile, oldPath) => {
-        this.updateBackLinks(file, oldPath, true);
+        this.debouncedUpdateBackLinks(file, oldPath, true);
       })
     );
 
     this.registerEvent(
       this.app.metadataCache.on("changed", async (file: TFile) => {
-        this.updateBackLinks(file, file.path, true);
+        this.debouncedUpdateBackLinks(file, file.path, true);
       })
     );
 
