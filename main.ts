@@ -23,7 +23,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
   async onload() {
     this.debouncedUpdateBackLinks = debounce(
       this.updateBackLinks.bind(this),
-      500,
+      1000,
       true
     );
 
