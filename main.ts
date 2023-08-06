@@ -6,8 +6,7 @@ import {
   TFile,
   Notice,
 } from "obsidian";
-
-const path = require("path");
+import { basename } from "path";
 
 export default class TitleAsLinkTextPlugin extends Plugin {
   async onload() {
@@ -77,7 +76,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
         /\[(.*?)\]\((.*?)\)/g,
         (_, linkText, linkUrl) => {
           const linkUrlDecoded = decodeURIComponent(linkUrl);
-          if (path.basename(linkUrlDecoded) === path.basename(oldPath)) {
+          if (basename(linkUrlDecoded) === basename(oldPath)) {
             return `[${title}](${linkUrl})`;
           }
           return `[${linkText}](${linkUrl})`;
@@ -141,9 +140,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     const firstHeading =
       cache.headings && (cache.headings[0] as HeadingCache).heading;
     return (
-      frontMatterTitle ||
-      firstHeading ||
-      path.basename(filePath).replace(".md", "")
+      frontMatterTitle || firstHeading || basename(filePath).replace(".md", "")
     );
   }
 }

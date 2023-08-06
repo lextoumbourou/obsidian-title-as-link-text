@@ -79,3 +79,13 @@ The plugin infers the title as follows:
 ## License
 
 MIT
+
+## Developing
+
+### Installation
+
+```bash
+nvm use 16
+npm install
+tsc
+```
