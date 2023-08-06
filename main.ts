@@ -5,8 +5,7 @@ import {
   CachedMetadata,
   TFile,
   Notice,
-  debounce,
-  Debouncer,
+  debounce
 } from "obsidian";
 
 function basename(path: string): string {
