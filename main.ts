@@ -5,7 +5,8 @@ import {
   CachedMetadata,
   TFile,
   Notice,
-  debounce
+  debounce,
+  TAbstractFile
 } from "obsidian";
 
 function basename(path: string): string {
@@ -13,43 +14,28 @@ function basename(path: string): string {
   return base;
 }
 
-export default class TitleAsLinkTextPlugin extends Plugin {
-  private debouncedUpdateBackLinks: (
-    file: TFile,
-    oldPath: string,
-    notify: boolean
-  ) => void;
+export interface VaultLike {
+  getMarkdownFiles(): TFile[];
+  read(file: TFile): Promise<string>;
+  modify(file: TFile, content: string): Promise<void>;
+  on(name: string, callback: (...args: any[]) => any): void;
+}
 
-  async onload() {
-    this.debouncedUpdateBackLinks = debounce(
-      this.updateBackLinks.bind(this),
-      1000,
-      true
-    );
+export interface MetadataCacheLike {
+  getFileCache(file: TFile): CachedMetadata | null;
+  getCache(path: string): CachedMetadata | null;
+  getFirstLinkpathDest(linkpath: string, sourcePath: string): TFile | null;
+  on(name: string, callback: (...args: any[]) => any): void;
+}
 
-    this.registerEvent(
-      this.app.vault.on("rename", async (file: TFile, oldPath) => {
-        this.debouncedUpdateBackLinks(file, oldPath, true);
-      })
-    );
-
-    this.registerEvent(
-      this.app.metadataCache.on("changed", async (file: TFile) => {
-        this.debouncedUpdateBackLinks(file, file.path, true);
-      })
-    );
-
-    this.addCommand({
-      id: "update-all-links",
-      name: "Update All Links",
-      callback: async () => {
-        await this.updateAllLinks();
-      },
-    });
-  }
+export class LinkUpdater {
+  constructor(
+    private vault: VaultLike,
+    private metadataCache: MetadataCacheLike
+  ) { }
 
   async updateAllLinks() {
-    const markdownFiles = this.app.vault.getMarkdownFiles();
+    const markdownFiles = this.vault.getMarkdownFiles();
 
     var updatedBacklinksCount = 0;
     for (const file of markdownFiles) {
@@ -60,9 +46,40 @@ export default class TitleAsLinkTextPlugin extends Plugin {
       }
     }
 
-    new Notice(
-      `Updated the link text of ${updatedBacklinksCount} Markdown link(s).`
+    return updatedBacklinksCount;
+  }
+
+  async updateLinksInNote(file: TFile): Promise<number> {
+    const fileContent = await this.vault.read(file);
+    const fileCache = this.metadataCache.getFileCache(file);
+    if (!fileCache) {
+      return 0;
+    }
+
+    let updatedCount = 0;
+    const newFileContent = fileContent.replace(
+      /\[(.*?)\]\((.*?)\)/g,
+      (_, linkText, linkUrl) => {
+        const linkUrlDecoded = decodeURIComponent(linkUrl);
+        const linkedFile = this.metadataCache.getFirstLinkpathDest(linkUrlDecoded, file.path);
+        if (linkedFile) {
+          const linkedCache = this.metadataCache.getFileCache(linkedFile);
+          if (linkedCache) {
+            const title = this.getPageTitle(linkedCache, linkedFile.path);
+            if (linkText !== title) {
+              updatedCount++;
+              return `[${title}](${linkUrl})`;
+            }
+          }
+        }
+        return `[${linkText}](${linkUrl})`;
+      }
     );
+
+    if (fileContent !== newFileContent) {
+      await this.vault.modify(file, newFileContent);
+    }
+    return updatedCount;
   }
 
   async updateBackLinks(file: TFile, oldPath: string, notify: boolean) {
@@ -74,37 +91,18 @@ export default class TitleAsLinkTextPlugin extends Plugin {
       return;
     }
 
-    const cachedFile = this.app.metadataCache.getFileCache(file);
-    if (!cachedFile) {
-      return;
-    }
-    const title = this.getPageTitle(cachedFile, file.path);
     const notes = this.getCachedNotesThatHaveLinkToFile(oldPath);
-
-    if (notes.length == 0) {
-      return;
-    }
-
     let updatedBacklinksCount = 0;
 
+    // Update backlinks in other notes
     for (let note of notes) {
-      const fileContent = await this.app.vault.read(note);
-      const newFileContent = fileContent.replace(
-        /\[(.*?)\]\((.*?)\)/g,
-        (_, linkText, linkUrl) => {
-          const linkUrlDecoded = decodeURIComponent(linkUrl);
-          if (basename(linkUrlDecoded) === basename(oldPath)) {
-            return `[${title}](${linkUrl})`;
-          }
-          return `[${linkText}](${linkUrl})`;
-        }
-      );
-
-      if (fileContent !== newFileContent) {
-        await this.app.vault.modify(note, newFileContent);
-        updatedBacklinksCount++;
-      }
+      const count = await this.updateLinksInNote(note);
+      updatedBacklinksCount += count;
     }
+
+    // Also update links in the changed file itself
+    const selfCount = await this.updateLinksInNote(file);
+    updatedBacklinksCount += selfCount;
 
     if (notify && updatedBacklinksCount > 0) {
       new Notice(
@@ -115,9 +113,9 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     return updatedBacklinksCount;
   }
 
-  getCachedNotesThatHaveLinkToFile(filePath: string): TFile[] {
+  private getCachedNotesThatHaveLinkToFile(filePath: string): TFile[] {
     let notesWithBacklinks: TFile[] = [];
-    let allNotes = this.app.vault.getMarkdownFiles();
+    let allNotes = this.vault.getMarkdownFiles();
 
     if (allNotes) {
       for (let note of allNotes) {
@@ -127,7 +125,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
           continue;
         }
 
-        const noteCache = this.app.metadataCache.getCache(notePath);
+        const noteCache = this.metadataCache.getCache(notePath);
         const embedsAndLinks = [
           ...(noteCache?.embeds || []),
           ...(noteCache?.links || []),
@@ -136,7 +134,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
           for (let link_data of embedsAndLinks) {
             // getFirstLinkpathDest = Get the best match for a linkpath.
             // https://marcus.se.net/obsidian-plugin-docs/reference/typescript/classes/MetadataCache
-            const firstLinkPath = app.metadataCache.getFirstLinkpathDest(
+            const firstLinkPath = this.metadataCache.getFirstLinkpathDest(
               link_data.link,
               note.path
             );
@@ -151,7 +149,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     return notesWithBacklinks;
   }
 
-  getPageTitle(cache: CachedMetadata, filePath: string): string {
+  private getPageTitle(cache: CachedMetadata, filePath: string): string {
     const frontMatterTitle =
       cache.frontmatter && (cache.frontmatter as FrontMatterCache).title;
     const firstHeading =
@@ -159,5 +157,48 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     return (
       frontMatterTitle || firstHeading || basename(filePath).replace(".md", "")
     );
+  }
+}
+
+export default class TitleAsLinkTextPlugin extends Plugin {
+  private debouncedUpdateBackLinks: (
+    file: TFile,
+    oldPath: string,
+    notify: boolean
+  ) => void = () => { };
+
+  private linkUpdater: LinkUpdater = new LinkUpdater(this.app.vault, this.app.metadataCache);
+
+  async onload() {
+    this.linkUpdater = new LinkUpdater(this.app.vault, this.app.metadataCache);
+
+    this.debouncedUpdateBackLinks = debounce(
+      this.linkUpdater.updateBackLinks.bind(this.linkUpdater),
+      1000,
+      true
+    );
+
+    this.registerEvent(
+      this.app.vault.on("rename", async (file: TAbstractFile, oldPath: string) => {
+        if (file instanceof TFile) {
+          this.debouncedUpdateBackLinks(file, oldPath, true);
+        }
+      })
+    );
+
+    this.registerEvent(
+      this.app.metadataCache.on("changed", async (file: TFile) => {
+        this.debouncedUpdateBackLinks(file, file.path, true);
+      })
+    );
+
+    this.addCommand({
+      id: "update-all-links",
+      name: "Update All Links",
+      callback: async () => {
+        const count = await this.linkUpdater.updateAllLinks();
+        new Notice(`Updated the link text of ${count} Markdown link(s).`);
+      },
+    });
   }
 }

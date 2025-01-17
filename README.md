@@ -33,11 +33,16 @@ Installation via BRAT (for pre-releases or betas)
 
 ### On file save
 
-When a file is updated, the plugin searches for back-references to the file. If the link text in the back reference does not match the note's title, the plugin updates the link text.
+When a file is updated, the plugin:
+1. Searches for back-references to the file and updates their link text if needed
+2. Updates any links within the modified file to ensure they use the current titles of their target files
 
 ### On file rename
 
-When we rename a file, the plugin searches for back-references to the update. Obsidian will update the URL as standard, and the plugin will update the link text to reflect the new title.
+When we rename a file:
+1. Obsidian updates all URLs to the file as standard
+2. The plugin updates the link text in all references to reflect the new title
+3. The plugin also updates any links within the renamed file itself
 
 ### Title inference
 
