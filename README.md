@@ -94,5 +94,5 @@ MIT
 ```bash
 nvm use 16
 npm install
-tsc
+npm run build
 ```
