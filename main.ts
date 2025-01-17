@@ -65,6 +65,11 @@ export class LinkUpdater {
         if (linkedFile) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
+            const aliases = this.getAliases(linkedCache);
+            if (aliases.includes(linkText)) {
+              return `[${linkText}](${linkUrl})`;
+            }
+
             const title = this.getPageTitle(linkedCache, linkedFile.path);
             if (linkText !== title) {
               updatedCount++;
@@ -157,6 +162,20 @@ export class LinkUpdater {
     return (
       frontMatterTitle || firstHeading || basename(filePath).replace(".md", "")
     );
+  }
+
+  private getAliases(cache: CachedMetadata): string[] {
+    if (!cache.frontmatter || !cache.frontmatter.aliases) {
+      return [];
+    }
+
+    const aliases = cache.frontmatter.aliases;
+    if (Array.isArray(aliases)) {
+      return aliases;
+    } else if (typeof aliases === 'string') {
+      return [aliases];
+    }
+    return [];
   }
 }
 

@@ -144,4 +144,42 @@ describe('LinkUpdater', () => {
     const updatedContent = await vault.read(sourceFile);
     expect(updatedContent).toBe('Here is a [Heading Title](note2.md)');
   });
+
+  it('should not update link text if it matches an alias', async () => {
+    vault = new MockVault({
+      'note1.md': 'Here is a [World](note2.md)',
+      'note2.md': 'Content of note 2'
+    });
+
+    metadataCache = new MockMetadataCache({
+      'note1.md': {
+        links: [{
+          link: 'note2.md',
+          original: '[World](note2.md)',
+        }],
+        frontmatter: undefined
+      } as CachedMetadata,
+      'note2.md': {
+        frontmatter: {
+          title: 'Dogs 1',
+          aliases: ['Hello', 'World']
+        },
+        headings: [{ heading: "Different Title" }] as HeadingCache[],
+        links: []
+      } as CachedMetadata
+    });
+
+    linkUpdater = new LinkUpdater(vault, metadataCache);
+
+    const sourceFile = {
+      path: 'note1.md',
+      name: 'note1.md'
+    } as TFile;
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+
+    expect(updatedCount).toBe(0);
+    const updatedContent = await vault.read(sourceFile);
+    expect(updatedContent).toBe('Here is a [World](note2.md)');
+  });
 });
