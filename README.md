@@ -1,8 +1,8 @@
 # Title As Link Text
 
-https://user-images.githubusercontent.com/1080552/230809814-ff8bc224-1455-420c-b363-a0d071ff801c.mp4
-
 ![Tests](https://github.com/lextoumbourou/obsidian-title-as-link-text/actions/workflows/test.yml/badge.svg)
+
+https://user-images.githubusercontent.com/1080552/230809814-ff8bc224-1455-420c-b363-a0d071ff801c.mp4
 
 ## Overview
 

@@ -1,13 +1,12 @@
 import { TFile, CachedMetadata, HeadingCache } from 'obsidian';
 import { LinkUpdater, VaultLike, MetadataCacheLike } from './main';
 
-// Add basename function
 function basename(path: string): string {
   let base = new String(path).substring(path.lastIndexOf("/") + 1);
   return base;
 }
 
-// Mock implementation of VaultLike
+// Mock implementation of Vault
 class MockVault implements VaultLike {
   private files: Map<string, string> = new Map();
 
@@ -35,7 +34,7 @@ class MockVault implements VaultLike {
   on() { } // No-op for testing
 }
 
-// Mock implementation of MetadataCacheLike
+// Mock implementation of MetadataCache
 class MockMetadataCache implements MetadataCacheLike {
   constructor(private fileCache: { [path: string]: CachedMetadata }) { }
 
@@ -59,7 +58,7 @@ class MockMetadataCache implements MetadataCacheLike {
     return null;
   }
 
-  on() { } // No-op for testing
+  on() { }
 }
 
 describe('LinkUpdater', () => {
