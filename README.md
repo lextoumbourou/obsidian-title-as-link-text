@@ -10,6 +10,10 @@ Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that automatica
 
 The plugin works with both standard Markdown links and Wikilinks.
 
+### WARNING
+
+This plugin once installed, can update multiple files when a document with backlinks is modified. Please ensure you have a backup of your vault before using the plugin.
+
 ### Wikilinks style aliases:
 
 `[file-name|Doc Title]`

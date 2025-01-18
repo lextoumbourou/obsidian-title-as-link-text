@@ -97,24 +97,30 @@ export class LinkUpdater {
     newFileContent = newFileContent.replace(
       /\[\[(.*?)(?:#(.*?))?(?:\|(.*?))?\]\]/g,
       (match, linkPath, subheading, linkText) => {
-        if (!linkText) return match; // Skip wikilinks without aliases
-
         const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, file.path);
         if (linkedFile) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
-            const aliases = this.getAliases(linkedCache);
-            // Find the most similar alias if one exists
-            const similarAlias = this.findMostSimilarAlias(linkText, aliases);
-            if (similarAlias && similarAlias !== linkText) {
-              updatedCount++;
-              const subheadingPart = subheading ? `#${subheading}` : '';
-              return `[[${linkPath}${subheadingPart}|${similarAlias}]]`;
-            }
-            // Only use title if no similar alias exists
-            if (!similarAlias) {
-              const title = this.getPageTitle(linkedCache, linkedFile.path);
-              if (linkText !== title) {
+            const title = this.getPageTitle(linkedCache, linkedFile.path);
+
+            if (linkText) {
+              // Handle links with existing display text (existing behavior)
+              const aliases = this.getAliases(linkedCache);
+              const similarAlias = this.findMostSimilarAlias(linkText, aliases);
+              if (similarAlias && similarAlias !== linkText) {
+                updatedCount++;
+                const subheadingPart = subheading ? `#${subheading}` : '';
+                return `[[${linkPath}${subheadingPart}|${similarAlias}]]`;
+              }
+              if (!similarAlias && linkText !== title) {
+                updatedCount++;
+                const subheadingPart = subheading ? `#${subheading}` : '';
+                return `[[${linkPath}${subheadingPart}|${title}]]`;
+              }
+            } else {
+              // Handle links without display text
+              const baseLinkName = linkPath.split('/').pop()?.replace('.md', '') || '';
+              if (title.toLowerCase() !== baseLinkName.toLowerCase()) {
                 updatedCount++;
                 const subheadingPart = subheading ? `#${subheading}` : '';
                 return `[[${linkPath}${subheadingPart}|${title}]]`;
@@ -203,7 +209,7 @@ export class LinkUpdater {
     const frontMatterTitle =
       cache.frontmatter && (cache.frontmatter as FrontMatterCache).title;
     const firstHeading =
-      cache.headings && (cache.headings[0] as HeadingCache).heading;
+      cache.headings && cache.headings.length > 0 && (cache.headings[0] as HeadingCache).heading;
     return (
       frontMatterTitle || firstHeading || basename(filePath).replace(".md", "")
     );

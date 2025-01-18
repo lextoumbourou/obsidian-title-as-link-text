@@ -317,6 +317,141 @@ describe('LinkUpdater', () => {
       expect(updatedCount).toBe(1);
       expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Subheading|Front Matter Title]]');
     });
+
+    it('should add display text to wikilink without alias when title differs', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[note2]]',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2',
+              original: '[[note2]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Different Title' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[note2|Different Title]]');
+    });
+
+    it('should not add display text to wikilink when title matches filename', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[note2]]',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2',
+              original: '[[note2]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'note2' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[note2]]');
+    });
+
+    it('should handle case-insensitive title matching', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[dogs]]',
+          'dogs.md': 'Content about dogs'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'dogs',
+              original: '[[dogs]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'dogs.md': {
+            frontmatter: { title: 'dogs' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[dogs]]');
+    });
+
+    it('should add display text for nested path wikilinks when title differs', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[folder/note2]]',
+          'folder/note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'folder/note2',
+              original: '[[folder/note2]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'folder/note2.md': {
+            frontmatter: { title: 'Different Title' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[folder/note2|Different Title]]');
+    });
+
+    it('should handle wikilinks with subheadings but no display text', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[note2#Section]]',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2#Section',
+              original: '[[note2#Section]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Different Title' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Section|Different Title]]');
+    });
   });
 
   describe('Alias similarity', () => {
