@@ -6,7 +6,10 @@ import {
   TFile,
   Notice,
   debounce,
-  TAbstractFile
+  TAbstractFile,
+  App,
+  PluginSettingTab,
+  Setting,
 } from "obsidian";
 
 function basename(path: string): string {
@@ -179,21 +182,27 @@ export class LinkUpdater {
   }
 }
 
-export default class TitleAsLinkTextPlugin extends Plugin {
-  private debouncedUpdateBackLinks: (
-    file: TFile,
-    oldPath: string,
-    notify: boolean
-  ) => void = () => { };
+interface TitleAsLinkTextSettings {
+  debounceDelay: number;
+}
 
-  private linkUpdater: LinkUpdater = new LinkUpdater(this.app.vault, this.app.metadataCache);
+const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
+  debounceDelay: 1000
+};
+
+export default class TitleAsLinkTextPlugin extends Plugin {
+  settings: TitleAsLinkTextSettings;
+  private linkUpdater: LinkUpdater;
+  private debouncedUpdateBackLinks: (file: TFile, oldPath: string, notify: boolean) => void;
 
   async onload() {
+    await this.loadSettings();
+
     this.linkUpdater = new LinkUpdater(this.app.vault, this.app.metadataCache);
 
     this.debouncedUpdateBackLinks = debounce(
       this.linkUpdater.updateBackLinks.bind(this.linkUpdater),
-      1000,
+      this.settings.debounceDelay,
       true
     );
 
@@ -219,5 +228,49 @@ export default class TitleAsLinkTextPlugin extends Plugin {
         new Notice(`Updated the link text of ${count} Markdown link(s).`);
       },
     });
+
+    this.addSettingTab(new TitleAsLinkTextSettingTab(this.app, this));
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+    // Recreate debounced function with new delay
+    this.debouncedUpdateBackLinks = debounce(
+      this.linkUpdater.updateBackLinks.bind(this.linkUpdater),
+      this.settings.debounceDelay,
+      true
+    );
+  }
+}
+
+class TitleAsLinkTextSettingTab extends PluginSettingTab {
+  plugin: TitleAsLinkTextPlugin;
+
+  constructor(app: App, plugin: TitleAsLinkTextPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Debounce delay')
+      .setDesc('How long to wait (in milliseconds) before updating links after a change')
+      .addText(text => text
+        .setPlaceholder('1000')
+        .setValue(String(this.plugin.settings.debounceDelay))
+        .onChange(async (value) => {
+          const delay = Number(value);
+          if (!isNaN(delay) && delay > 0) {
+            this.plugin.settings.debounceDelay = delay;
+            await this.plugin.saveSettings();
+          }
+        }));
   }
 }
