@@ -73,14 +73,19 @@ export class LinkUpdater {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const aliases = this.getAliases(linkedCache);
-            if (aliases.includes(linkText)) {
-              return `[${linkText}](${linkUrl})`;
-            }
-
-            const title = this.getPageTitle(linkedCache, linkedFile.path);
-            if (linkText !== title) {
+            // Find the most similar alias if one exists
+            const similarAlias = this.findMostSimilarAlias(linkText, aliases);
+            if (similarAlias && similarAlias !== linkText) {
               updatedCount++;
-              return `[${title}](${linkUrl})`;
+              return `[${similarAlias}](${linkUrl})`;
+            }
+            // Only use title if no similar alias exists
+            if (!similarAlias) {
+              const title = this.getPageTitle(linkedCache, linkedFile.path);
+              if (linkText !== title) {
+                updatedCount++;
+                return `[${title}](${linkUrl})`;
+              }
             }
           }
         }
@@ -99,15 +104,21 @@ export class LinkUpdater {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const aliases = this.getAliases(linkedCache);
-            if (aliases.includes(linkText)) {
-              return match;
-            }
-
-            const title = this.getPageTitle(linkedCache, linkedFile.path);
-            if (linkText !== title) {
+            // Find the most similar alias if one exists
+            const similarAlias = this.findMostSimilarAlias(linkText, aliases);
+            if (similarAlias && similarAlias !== linkText) {
               updatedCount++;
               const subheadingPart = subheading ? `#${subheading}` : '';
-              return `[[${linkPath}${subheadingPart}|${title}]]`;
+              return `[[${linkPath}${subheadingPart}|${similarAlias}]]`;
+            }
+            // Only use title if no similar alias exists
+            if (!similarAlias) {
+              const title = this.getPageTitle(linkedCache, linkedFile.path);
+              if (linkText !== title) {
+                updatedCount++;
+                const subheadingPart = subheading ? `#${subheading}` : '';
+                return `[[${linkPath}${subheadingPart}|${title}]]`;
+              }
             }
           }
         }
@@ -210,6 +221,60 @@ export class LinkUpdater {
       return [aliases];
     }
     return [];
+  }
+
+  private findMostSimilarAlias(text: string, aliases: string[]): string | null {
+    // First check for exact substring matches
+    for (const alias of aliases) {
+      if (alias.toLowerCase().includes(text.toLowerCase()) ||
+        text.toLowerCase().includes(alias.toLowerCase())) {
+        return alias;
+      }
+    }
+
+    // Fall back to Levenshtein distance for fuzzy matching
+    let mostSimilarAlias = null;
+    let highestSimilarity = 0;
+
+    for (const alias of aliases) {
+      const similarity = this.calculateSimilarity(text, alias);
+      if (similarity > highestSimilarity && similarity >= 0.8) {
+        highestSimilarity = similarity;
+        mostSimilarAlias = alias;
+      }
+    }
+
+    return mostSimilarAlias;
+  }
+
+  private calculateSimilarity(str1: string, str2: string): number {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= str1.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= str2.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str1.length; i++) {
+      for (let j = 1; j <= str2.length; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,   // insertion
+            matrix[i - 1][j] + 1    // deletion
+          );
+        }
+      }
+    }
+
+    const distance = matrix[str1.length][str2.length];
+    const maxLength = Math.max(str1.length, str2.length);
+    return 1 - (distance / maxLength);
   }
 }
 
