@@ -16,7 +16,11 @@
       "ES5",
       "ES6",
       "ES7"
-    ]
+    ],
+    "experimentalDecorators": true,
+    "useDefineForClassFields": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
   "include": [
     "**/*.ts"
