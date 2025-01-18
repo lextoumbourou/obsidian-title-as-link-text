@@ -1,6 +1,68 @@
 import { TFile, CachedMetadata, HeadingCache } from 'obsidian';
 import { LinkUpdater, VaultLike, MetadataCacheLike } from './main';
 
+// Add these mock classes at the top of the test file
+class MockApp {
+  vault: any;
+  metadataCache: any;
+  constructor() {
+    this.vault = {};
+    this.metadataCache = {};
+  }
+}
+
+class MockPluginSettingTab {
+  app: any;
+  plugin: any;
+  constructor(app: any, plugin: any) {
+    this.app = app;
+    this.plugin = plugin;
+  }
+}
+
+class MockPlugin {
+  app: any;
+  constructor() {
+    this.app = new MockApp();
+  }
+  registerEvent() {}
+  addCommand() {}
+  addSettingTab() {}
+  loadData() { return Promise.resolve({}); }
+  saveData() { return Promise.resolve(); }
+}
+
+// Mock the required Obsidian imports
+jest.mock('obsidian', () => ({
+  Plugin: class MockPlugin {
+    app: any;
+    constructor() {
+      this.app = { vault: {}, metadataCache: {} };
+    }
+    registerEvent() {}
+    addCommand() {}
+    addSettingTab() {}
+    loadData() { return Promise.resolve({}); }
+    saveData() { return Promise.resolve(); }
+  },
+  PluginSettingTab: class MockPluginSettingTab {
+    app: any;
+    plugin: any;
+    constructor(app: any, plugin: any) {
+      this.app = app;
+      this.plugin = plugin;
+    }
+  },
+  Setting: jest.fn().mockImplementation(() => ({
+    setName: jest.fn().mockReturnThis(),
+    setDesc: jest.fn().mockReturnThis(),
+    addText: jest.fn().mockReturnThis(),
+  })),
+  Notice: jest.fn(),
+  debounce: (fn: any) => fn,
+  TFile: class {},
+}));
+
 function basename(path: string): string {
   let base = new String(path).substring(path.lastIndexOf("/") + 1);
   return base;
