@@ -1,10 +1,3 @@
----
-title: Main Title
-aliases:
-  - Short Name
-  - Alternative Title
----
-
 # Title As Link Text
 
 ![Tests](https://github.com/lextoumbourou/obsidian-title-as-link-text/actions/workflows/test.yml/badge.svg)
@@ -110,11 +103,16 @@ The plugin respects aliases defined in the frontmatter. If a link's text matches
 
 Example:
 
-````markdown
+```markdown
+---
+title: Page Title
+aliases:
+- Alternative Title
+---
 ```
 
 If you link to this file using any of its aliases, the link text will be preserved:
-- `[Short Name](file.md)` stays as is
+- `[Page Title](file.md)` stays as is
 - `[[file|Alternative Title]]` stays as is
 
 #### Alias Matching
@@ -158,4 +156,4 @@ MIT
 nvm use 16
 npm install
 npm run build
-````
+```
