@@ -22,7 +22,6 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci
-        npm install --save-dev @babel/preset-typescript ts-jest @types/jest
 
     - name: Run tests
       run: npm test
