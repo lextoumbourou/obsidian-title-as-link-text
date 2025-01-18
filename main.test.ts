@@ -234,6 +234,90 @@ describe('LinkUpdater', () => {
       expect(updatedCount).toBe(0);
       expect(await vault.read(sourceFile)).toBe('Here is a [World](note2.md)');
     });
+
+    it('should not modify checkbox markdown followed by a link', async () => {
+      setupTest(
+        {
+          'note1.md': '[ ] [link](note2.md)\n[x] [another](note2.md)',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2.md',
+              original: '[link](note2.md)',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Different Title' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toEqual(2);
+      expect(await vault.read(sourceFile)).toBe('[ ] [Different Title](note2.md)\n[x] [Different Title](note2.md)');
+    });
+
+    it('should not modify checkbox markdown with spaces followed by a link', async () => {
+      setupTest(
+        {
+          'note1.md': '  [ ]  [link](note2.md)',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2.md',
+              original: '[link](note2.md)',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Different Title' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toEqual(1);
+      expect(await vault.read(sourceFile)).toBe('  [ ]  [Different Title](note2.md)');
+    });
+
+    it('should handle mixed checkbox and regular markdown links correctly', async () => {
+      setupTest(
+        {
+          'note1.md': '[ ] [task](note2.md)\nRegular [link](note2.md)',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2.md',
+              original: '[task](note2.md)',
+            }, {
+              link: 'note2.md',
+              original: '[link](note2.md)',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Different Title' },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(2);
+      expect(await vault.read(sourceFile)).toBe('[ ] [Different Title](note2.md)\nRegular [Different Title](note2.md)');
+    });
   });
 
   describe('Wiki links', () => {

@@ -76,9 +76,9 @@ export class LinkUpdater {
 
     let updatedCount = 0;
 
-    // First handle Markdown links
+    // First handle Markdown links, excluding checkbox patterns
     let newFileContent = fileContent.replace(
-      /\[(.*?)\]\((.*?)\)/g,
+      /(?<!\[[ x])\[([^\]]+)\]\(([^)]+)\)/g,
       (_, linkText, linkUrl) => {
         const linkUrlDecoded = decodeURIComponent(linkUrl);
         // Remove any #subheading from the link before looking up the file
