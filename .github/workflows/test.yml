@@ -19,10 +19,11 @@ jobs:
         node-version: '18'
         cache: 'npm'
 
+    - name: List files  # Debug step to verify file existence
+      run: ls -la
+
     - name: Install dependencies
-      working-directory: ./obsidian-title-as-link-text
       run: npm ci
 
     - name: Run tests
-      working-directory: ./obsidian-title-as-link-text
       run: npm test
