@@ -4,4 +4,5 @@ node_modules
 .vscode/
 .idea/
 
-*js
+main.js
+main.test.js
