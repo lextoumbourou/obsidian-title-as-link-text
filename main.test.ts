@@ -128,6 +128,11 @@ describe('LinkUpdater', () => {
   let linkUpdater: LinkUpdater;
   let sourceFile: TFile;
 
+  const defaultSettings = {
+    debounceDelay: 1000,
+    similarityThreshold: 0.65
+  };
+
   const createSourceFile = (path: string = 'note1.md'): TFile => ({
     path,
     name: path
@@ -139,7 +144,7 @@ describe('LinkUpdater', () => {
   ) => {
     vault = new MockVault(files);
     metadataCache = new MockMetadataCache(metadata);
-    linkUpdater = new LinkUpdater(vault, metadataCache);
+    linkUpdater = new LinkUpdater(vault, metadataCache, defaultSettings);
     sourceFile = createSourceFile();
   };
 
@@ -451,6 +456,90 @@ describe('LinkUpdater', () => {
       const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
       expect(updatedCount).toBe(1);
       expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Section|Different Title]]');
+    });
+
+    it('should not add display text to wikilink when heading matches filename', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[dogs]]',
+          'dogs.md': 'Content about dogs'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'dogs',
+              original: '[[dogs]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'dogs.md': {
+            frontmatter: undefined,
+            headings: [{ heading: "dogs" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[dogs]]');
+    });
+
+    it('should not add display text to wikilink when there are no headings or title', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[dogs]]',
+          'dogs.md': 'Content about dogs'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'dogs',
+              original: '[[dogs]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'dogs.md': {
+            frontmatter: undefined,
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[dogs]]');
+    });
+
+    it('should not update link text to alias when it matches the title exactly', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[dogs|Dogs]]',
+          'dogs.md': 'Content about dogs'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'dogs',
+              original: '[[dogs|Dogs]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'dogs.md': {
+            frontmatter: {
+              title: 'Dogs',
+              aliases: ['Doggos']
+            },
+            headings: [],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[dogs|Dogs]]');
     });
   });
 

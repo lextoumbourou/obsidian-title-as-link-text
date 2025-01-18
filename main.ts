@@ -31,11 +31,26 @@ export interface MetadataCacheLike {
   on(name: string, callback: (...args: any[]) => any): void;
 }
 
+export interface TitleAsLinkTextSettings {
+  debounceDelay: number;
+  similarityThreshold: number;
+}
+
+const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
+  debounceDelay: 1000,
+  similarityThreshold: 0.65
+};
+
 export class LinkUpdater {
+  private settings: TitleAsLinkTextSettings;
+
   constructor(
     private vault: VaultLike,
-    private metadataCache: MetadataCacheLike
-  ) { }
+    private metadataCache: MetadataCacheLike,
+    settings: TitleAsLinkTextSettings
+  ) {
+    this.settings = settings;
+  }
 
   async updateAllLinks() {
     const markdownFiles = this.vault.getMarkdownFiles();
@@ -102,28 +117,31 @@ export class LinkUpdater {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const title = this.getPageTitle(linkedCache, linkedFile.path);
+            const subheadingPart = subheading ? `#${subheading}` : '';
+            const linkPart = `${linkPath}${subheadingPart}`;
 
             if (linkText) {
-              // Handle links with existing display text (existing behavior)
+              // If the current link text matches the title exactly, don't try to find an alias
+              if (linkText === title) {
+                return match;
+              }
+              // Handle links with existing display text
               const aliases = this.getAliases(linkedCache);
               const similarAlias = this.findMostSimilarAlias(linkText, aliases);
               if (similarAlias && similarAlias !== linkText) {
                 updatedCount++;
-                const subheadingPart = subheading ? `#${subheading}` : '';
-                return `[[${linkPath}${subheadingPart}|${similarAlias}]]`;
+                return `[[${linkPart}|${similarAlias}]]`;
               }
               if (!similarAlias && linkText !== title) {
                 updatedCount++;
-                const subheadingPart = subheading ? `#${subheading}` : '';
-                return `[[${linkPath}${subheadingPart}|${title}]]`;
+                return linkPart !== title ? `[[${linkPart}|${title}]]` : `[[${linkPart}]]`;
               }
             } else {
               // Handle links without display text
               const baseLinkName = linkPath.split('/').pop()?.replace('.md', '') || '';
-              if (title.toLowerCase() !== baseLinkName.toLowerCase()) {
+              if (title && title !== baseLinkName) {
                 updatedCount++;
-                const subheadingPart = subheading ? `#${subheading}` : '';
-                return `[[${linkPath}${subheadingPart}|${title}]]`;
+                return linkPart !== title ? `[[${linkPart}|${title}]]` : `[[${linkPart}]]`;
               }
             }
           }
@@ -230,7 +248,6 @@ export class LinkUpdater {
   }
 
   private findMostSimilarAlias(text: string, aliases: string[]): string | null {
-    // First check for exact substring matches
     for (const alias of aliases) {
       if (alias.toLowerCase().includes(text.toLowerCase()) ||
         text.toLowerCase().includes(alias.toLowerCase())) {
@@ -244,7 +261,7 @@ export class LinkUpdater {
 
     for (const alias of aliases) {
       const similarity = this.calculateSimilarity(text, alias);
-      if (similarity > highestSimilarity && similarity >= 0.8) {
+      if (similarity > highestSimilarity && similarity >= this.settings.similarityThreshold) {
         highestSimilarity = similarity;
         mostSimilarAlias = alias;
       }
@@ -284,14 +301,6 @@ export class LinkUpdater {
   }
 }
 
-interface TitleAsLinkTextSettings {
-  debounceDelay: number;
-}
-
-const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
-  debounceDelay: 1000
-};
-
 export default class TitleAsLinkTextPlugin extends Plugin {
   settings: TitleAsLinkTextSettings;
   private linkUpdater: LinkUpdater;
@@ -300,7 +309,11 @@ export default class TitleAsLinkTextPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    this.linkUpdater = new LinkUpdater(this.app.vault, this.app.metadataCache);
+    this.linkUpdater = new LinkUpdater(
+      this.app.vault,
+      this.app.metadataCache,
+      this.settings
+    );
 
     this.debouncedUpdateBackLinks = debounce(
       this.linkUpdater.updateBackLinks.bind(this.linkUpdater),
@@ -371,6 +384,20 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
           const delay = Number(value);
           if (!isNaN(delay) && delay > 0) {
             this.plugin.settings.debounceDelay = delay;
+            await this.plugin.saveSettings();
+          }
+        }));
+
+    new Setting(containerEl)
+      .setName('Similarity threshold')
+      .setDesc('Minimum similarity score (0.0 to 1.0) required for alias matching. Higher values require closer matches.')
+      .addText(text => text
+        .setPlaceholder('0.65')
+        .setValue(String(this.plugin.settings.similarityThreshold))
+        .onChange(async (value) => {
+          const threshold = Number(value);
+          if (!isNaN(threshold) && threshold >= 0 && threshold <= 1) {
+            this.plugin.settings.similarityThreshold = threshold;
             await this.plugin.saveSettings();
           }
         }));
