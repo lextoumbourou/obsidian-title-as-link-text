@@ -60,11 +60,15 @@ export class LinkUpdater {
     }
 
     let updatedCount = 0;
-    const newFileContent = fileContent.replace(
+
+    // First handle Markdown links
+    let newFileContent = fileContent.replace(
       /\[(.*?)\]\((.*?)\)/g,
       (_, linkText, linkUrl) => {
         const linkUrlDecoded = decodeURIComponent(linkUrl);
-        const linkedFile = this.metadataCache.getFirstLinkpathDest(linkUrlDecoded, file.path);
+        // Remove any #subheading from the link before looking up the file
+        const baseLinkUrl = linkUrlDecoded.split('#')[0];
+        const linkedFile = this.metadataCache.getFirstLinkpathDest(baseLinkUrl, file.path);
         if (linkedFile) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
@@ -81,6 +85,33 @@ export class LinkUpdater {
           }
         }
         return `[${linkText}](${linkUrl})`;
+      }
+    );
+
+    // Then handle wikilinks
+    newFileContent = newFileContent.replace(
+      /\[\[(.*?)(?:#(.*?))?(?:\|(.*?))?\]\]/g,
+      (match, linkPath, subheading, linkText) => {
+        if (!linkText) return match; // Skip wikilinks without aliases
+
+        const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, file.path);
+        if (linkedFile) {
+          const linkedCache = this.metadataCache.getFileCache(linkedFile);
+          if (linkedCache) {
+            const aliases = this.getAliases(linkedCache);
+            if (aliases.includes(linkText)) {
+              return match;
+            }
+
+            const title = this.getPageTitle(linkedCache, linkedFile.path);
+            if (linkText !== title) {
+              updatedCount++;
+              const subheadingPart = subheading ? `#${subheading}` : '';
+              return `[[${linkPath}${subheadingPart}|${title}]]`;
+            }
+          }
+        }
+        return match;
       }
     );
 

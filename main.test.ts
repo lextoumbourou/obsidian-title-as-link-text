@@ -1,7 +1,6 @@
 import { TFile, CachedMetadata, HeadingCache } from 'obsidian';
 import { LinkUpdater, VaultLike, MetadataCacheLike } from './main';
 
-// Add these mock classes at the top of the test file
 class MockApp {
   vault: any;
   metadataCache: any;
@@ -25,9 +24,9 @@ class MockPlugin {
   constructor() {
     this.app = new MockApp();
   }
-  registerEvent() {}
-  addCommand() {}
-  addSettingTab() {}
+  registerEvent() { }
+  addCommand() { }
+  addSettingTab() { }
   loadData() { return Promise.resolve({}); }
   saveData() { return Promise.resolve(); }
 }
@@ -39,9 +38,9 @@ jest.mock('obsidian', () => ({
     constructor() {
       this.app = { vault: {}, metadataCache: {} };
     }
-    registerEvent() {}
-    addCommand() {}
-    addSettingTab() {}
+    registerEvent() { }
+    addCommand() { }
+    addSettingTab() { }
     loadData() { return Promise.resolve({}); }
     saveData() { return Promise.resolve(); }
   },
@@ -60,7 +59,7 @@ jest.mock('obsidian', () => ({
   })),
   Notice: jest.fn(),
   debounce: (fn: any) => fn,
-  TFile: class {},
+  TFile: class { },
 }));
 
 function basename(path: string): string {
@@ -127,120 +126,196 @@ describe('LinkUpdater', () => {
   let vault: MockVault;
   let metadataCache: MockMetadataCache;
   let linkUpdater: LinkUpdater;
+  let sourceFile: TFile;
 
-  beforeEach(() => {
+  const createSourceFile = (path: string = 'note1.md'): TFile => ({
+    path,
+    name: path
+  } as TFile);
 
-  });
-
-  it('should update link text based on frontmatter title', async () => {
-    vault = new MockVault({
-      'note1.md': 'Here is a [link](note2.md)',
-      'note2.md': 'Content of note 2'
-    });
-
-    metadataCache = new MockMetadataCache({
-      'note1.md': {
-        links: [{
-          link: 'note2.md',
-          original: '[link](note2.md)',
-        }],
-        headings: [{ heading: "New Title" }] as HeadingCache[],
-        frontmatter: undefined
-      } as CachedMetadata,
-      'note2.md': {
-        frontmatter: { title: 'Front Matter Title' },
-        headings: [{ heading: "New Title" }] as HeadingCache[],
-        links: []
-      } as CachedMetadata
-    });
-
+  const setupTest = (
+    files: { [path: string]: string },
+    metadata: { [path: string]: CachedMetadata }
+  ) => {
+    vault = new MockVault(files);
+    metadataCache = new MockMetadataCache(metadata);
     linkUpdater = new LinkUpdater(vault, metadataCache);
+    sourceFile = createSourceFile();
+  };
 
-    const sourceFile = {
-      path: 'note1.md',
-      name: 'note1.md'
-    } as TFile;
-
-    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
-
-    expect(updatedCount).toBe(1);
-
-    const updatedContent = await vault.read(sourceFile);
-    expect(updatedContent).toBe('Here is a [Front Matter Title](note2.md)');
-  });
-
-  it('should update link text based on heading title', async () => {
-    vault = new MockVault({
-      'note1.md': 'Here is a [link](note2.md)',
-      'note2.md': 'Content of note 2'
-    });
-
-    metadataCache = new MockMetadataCache({
-      'note1.md': {
-        links: [{
-          link: 'note2.md',
-          original: '[link](note2.md)',
-        }],
-        headings: [{ heading: "New Title" }] as HeadingCache[],
-        frontmatter: undefined
-      } as CachedMetadata,
-      'note2.md': {
-        frontmatter: undefined,
-        headings: [{ heading: "Heading Title" }] as HeadingCache[],
-        links: []
-      } as CachedMetadata
-    });
-
-    linkUpdater = new LinkUpdater(vault, metadataCache);
-
-    const sourceFile = {
-      path: 'note1.md',
-      name: 'note1.md'
-    } as TFile;
-
-    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
-
-    expect(updatedCount).toBe(1);
-
-    const updatedContent = await vault.read(sourceFile);
-    expect(updatedContent).toBe('Here is a [Heading Title](note2.md)');
-  });
-
-  it('should not update link text if it matches an alias', async () => {
-    vault = new MockVault({
-      'note1.md': 'Here is a [World](note2.md)',
-      'note2.md': 'Content of note 2'
-    });
-
-    metadataCache = new MockMetadataCache({
-      'note1.md': {
-        links: [{
-          link: 'note2.md',
-          original: '[World](note2.md)',
-        }],
-        frontmatter: undefined
-      } as CachedMetadata,
-      'note2.md': {
-        frontmatter: {
-          title: 'Dogs 1',
-          aliases: ['Hello', 'World']
+  describe('Markdown links', () => {
+    it('should update link text based on frontmatter title', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [link](note2.md)',
+          'note2.md': 'Content of note 2'
         },
-        headings: [{ heading: "Different Title" }] as HeadingCache[],
-        links: []
-      } as CachedMetadata
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2.md',
+              original: '[link](note2.md)',
+            }],
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Front Matter Title' },
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [Front Matter Title](note2.md)');
     });
 
-    linkUpdater = new LinkUpdater(vault, metadataCache);
+    it('should update link text based on heading title', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [link](note2.md)',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2.md',
+              original: '[link](note2.md)',
+            }],
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: undefined,
+            headings: [{ heading: "Heading Title" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
 
-    const sourceFile = {
-      path: 'note1.md',
-      name: 'note1.md'
-    } as TFile;
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [Heading Title](note2.md)');
+    });
 
-    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    it('should not update link text if it matches an alias', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [World](note2.md)',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2.md',
+              original: '[World](note2.md)',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: {
+              title: 'Dogs 1',
+              aliases: ['Hello', 'World']
+            },
+            headings: [{ heading: "Different Title" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
 
-    expect(updatedCount).toBe(0);
-    const updatedContent = await vault.read(sourceFile);
-    expect(updatedContent).toBe('Here is a [World](note2.md)');
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [World](note2.md)');
+    });
+  });
+
+  describe('Wiki links', () => {
+    it('should update wikilink text based on frontmatter title', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[note2|link]]',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2',
+              original: '[[note2|link]]',
+            }],
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Front Matter Title' },
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[note2|Front Matter Title]]');
+    });
+
+    it('should not update wikilink text if it matches an alias', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[note2|World]]',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2',
+              original: '[[note2|World]]',
+            }],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: {
+              title: 'Dogs 1',
+              aliases: ['Hello', 'World']
+            },
+            headings: [{ heading: "Different Title" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(0);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[note2|World]]');
+    });
+
+    it('should update wikilink text with subheading based on frontmatter title', async () => {
+      setupTest(
+        {
+          'note1.md': 'Here is a [[note2#Subheading|link]]',
+          'note2.md': 'Content of note 2'
+        },
+        {
+          'note1.md': {
+            links: [{
+              link: 'note2#Subheading',
+              original: '[[note2#Subheading|link]]',
+            }],
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            frontmatter: undefined
+          } as CachedMetadata,
+          'note2.md': {
+            frontmatter: { title: 'Front Matter Title' },
+            headings: [{ heading: "New Title" }] as HeadingCache[],
+            links: []
+          } as CachedMetadata
+        }
+      );
+
+      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+      expect(updatedCount).toBe(1);
+      expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Subheading|Front Matter Title]]');
+    });
   });
 });
