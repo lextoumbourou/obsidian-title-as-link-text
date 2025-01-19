@@ -76,9 +76,18 @@ export class LinkUpdater {
 
     let updatedCount = 0;
 
-    // First handle Markdown links, excluding checkbox patterns
+    // Markdown link regex breakdown:
+    // (?<!\[[ x])     - Negative lookbehind: don't match if preceded by checkbox pattern '[ ]' or '[x]'
+    // \[              - Match literal opening bracket
+    // ([^\]\n]+)      - Group 1: Capture chars that aren't closing bracket or newline
+    // \]              - Match literal closing bracket
+    // \(              - Match literal opening parenthesis
+    // ([^)\n]+)       - Group 2: Capture chars that aren't closing paren or newline
+    // \)              - Match literal closing parenthesis
+    const markdownLinkRegex = /(?<!\[[ x])\[([^\]\n]+)\]\(([^)\n]+)\)/g;
+
     let newFileContent = fileContent.replace(
-      /(?<!\[[ x])\[([^\]]+)\]\(([^)]+)\)/g,
+      markdownLinkRegex,
       (_, linkText, linkUrl) => {
         const linkUrlDecoded = decodeURIComponent(linkUrl);
         // Remove any #subheading from the link before looking up the file
@@ -108,9 +117,20 @@ export class LinkUpdater {
       }
     );
 
-    // Then handle wikilinks
+    // Wikilinks regex breakdown:
+    // \[\[              - Match literal opening double brackets
+    // ([^\]\[\n]+?)     - Group 1: Capture chars that aren't brackets or newline, non-greedy
+    // (?:               - Start non-capturing group
+    //   #([^\]\[\n]+?)  - Group 2: Optional subheading after #, no brackets/newline, non-greedy
+    // )?                - End optional non-capturing group
+    // (?:               - Start non-capturing group
+    //   \|([^\]\[\n]+?) - Group 3: Optional display text after |, no brackets/newline, non-greedy
+    // )?                - End optional non-capturing group
+    // \]\]              - Match literal closing double brackets
+    const wikilinkRegex = /\[\[([^\]\[\n]+?)(?:#([^\]\[\n]+?))?(?:\|([^\]\[\n]+?))?\]\]/g
+
     newFileContent = newFileContent.replace(
-      /\[\[(.*?)(?:#(.*?))?(?:\|(.*?))?\]\]/g,
+      wikilinkRegex,
       (match, linkPath, subheading, linkText) => {
         const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, file.path);
         if (linkedFile) {
