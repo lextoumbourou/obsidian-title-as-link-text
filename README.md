@@ -6,7 +6,7 @@
 
 ## ✨ What It Does
 
-Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligently transforms your links to use page titles instead of filenames. Whether you're using Markdown-style links or Wikilinks.
+Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligently transforms your links to use note titles instead of filenames. Whether you're using Markdown-style links or Wikilinks.
 
 **Before:**
 ```markdown
@@ -24,8 +24,8 @@ Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligen
 
 - **Smart Title Detection**: Automatically finds the best title from frontmatter, H1 headers, or filenames
 - **Multiple Link Styles**:
-  - Wikilinks: `[[file-name|Doc Title]]`
-  - Markdown: `[Doc Title](./file-name.md)`
+  - Wikilinks: `[[file-name|Note Title]]`
+  - Markdown: `[Note Title](./file-name.md)`
 - **Alias Support**: Respects your custom aliases with smart matching
 - **Automatic Updates**: Links update automatically when you save or rename files
 
@@ -37,7 +37,7 @@ Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligen
 
 ## ⚠️  WARNING
 
-This plugin can modify multiple files when documents with backlinks are changed. **Please backup your vault before using.**
+This plugin can modify multiple files when notes with backlinks are changed. **Please backup your vault before using.**
 
 ## 🚀 Installation
 
@@ -57,14 +57,14 @@ This plugin can modify multiple files when documents with backlinks are changed.
 
    ```yaml
    ---
-   title: My Document
+   title: My Note
    ---
    ```
 
 2. **H1 Headers**: Falls back to first # heading
 
    ```markdown
-   # My Document
+   # My Note
    ```
 
 3. **Filename Fallback**: Uses filename if no other title is found
@@ -100,4 +100,4 @@ MIT
 
 ---
 
-Made with ❤️ for the Obsidian community
+Made with ❤️  for the Obsidian community
