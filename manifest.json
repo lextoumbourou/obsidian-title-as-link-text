@@ -3,7 +3,7 @@
   "name": "Title As Link Text",
   "version": "1.1.4",
   "minAppVersion": "0.15.0",
-  "description": "Automatically updates links to use note titles instead of filenames.",
+  "description": "Automatically updates link text to use note titles instead of filenames.",
   "author": "Lex Toumbourou",
   "authorUrl": "https://notesbylex.com",
   "fundingUrl": {
