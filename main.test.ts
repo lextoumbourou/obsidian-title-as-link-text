@@ -1,53 +1,32 @@
 import { TFile, CachedMetadata, HeadingCache } from 'obsidian';
 import { LinkUpdater, VaultLike, MetadataCacheLike } from './main';
 
-class MockApp {
-  vault: any;
-  metadataCache: any;
-  constructor() {
-    this.vault = {};
-    this.metadataCache = {};
-  }
-}
-
-class MockPluginSettingTab {
-  app: any;
-  plugin: any;
-  constructor(app: any, plugin: any) {
-    this.app = app;
-    this.plugin = plugin;
-  }
-}
-
-class MockPlugin {
-  app: any;
-  constructor() {
-    this.app = new MockApp();
-  }
-  registerEvent() { }
-  addCommand() { }
-  addSettingTab() { }
-  loadData() { return Promise.resolve({}); }
-  saveData() { return Promise.resolve(); }
+// Define proper types for App
+interface MockAppInterface {
+  vault: VaultLike;
+  metadataCache: MetadataCacheLike;
 }
 
 // Mock the required Obsidian imports
 jest.mock('obsidian', () => ({
   Plugin: class MockPlugin {
-    app: any;
+    app: MockAppInterface;
     constructor() {
-      this.app = { vault: {}, metadataCache: {} };
+      this.app = {
+        vault: {} as VaultLike,
+        metadataCache: {} as MetadataCacheLike
+      };
     }
-    registerEvent() { }
-    addCommand() { }
-    addSettingTab() { }
-    loadData() { return Promise.resolve({}); }
-    saveData() { return Promise.resolve(); }
+    registerEvent(): void { /* Mock implementation */ }
+    addCommand(): void { /* Mock implementation */ }
+    addSettingTab(): void { /* Mock implementation */ }
+    loadData(): Promise<Record<string, unknown>> { return Promise.resolve({}); }
+    saveData(): Promise<void> { return Promise.resolve(); }
   },
   PluginSettingTab: class MockPluginSettingTab {
-    app: any;
-    plugin: any;
-    constructor(app: any, plugin: any) {
+    app: MockAppInterface;
+    plugin: unknown;
+    constructor(app: MockAppInterface, plugin: unknown) {
       this.app = app;
       this.plugin = plugin;
     }
@@ -58,12 +37,12 @@ jest.mock('obsidian', () => ({
     addText: jest.fn().mockReturnThis(),
   })),
   Notice: jest.fn(),
-  debounce: (fn: any) => fn,
+  debounce: (fn: () => void) => fn,
   TFile: class { },
 }));
 
 function basename(path: string): string {
-  let base = new String(path).substring(path.lastIndexOf("/") + 1);
+  const base = new String(path).substring(path.lastIndexOf('/') + 1);
   return base;
 }
 
@@ -78,10 +57,15 @@ class MockVault implements VaultLike {
   }
 
   getMarkdownFiles(): TFile[] {
-    return Array.from(this.files.keys()).map(path => ({
-      path,
-      name: basename(path),
-    }) as TFile);
+    return Array.from(this.files.keys()).map(path => {
+      const file = new TFile();
+      file.path = path;
+      file.name = basename(path);
+      if (!(file instanceof TFile)) {
+        throw new Error('Failed to create TFile instance');
+      }
+      return file;
+    });
   }
 
   async read(file: TFile): Promise<string> {
@@ -92,7 +76,9 @@ class MockVault implements VaultLike {
     this.files.set(file.path, content);
   }
 
-  on() { } // No-op for testing
+  on(): void {
+    // Intentionally empty for testing
+  }
 }
 
 // Mock implementation of MetadataCache
@@ -107,19 +93,24 @@ class MockMetadataCache implements MetadataCacheLike {
     return this.fileCache[path] || null;
   }
 
-  getFirstLinkpathDest(linkpath: string, sourcePath: string): TFile | null {
+  getFirstLinkpathDest(linkpath: string, _sourcePath: string): TFile | null {
+    // Prefix unused parameter with underscore
     const normalizedLinkpath = linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`;
     if (this.fileCache[normalizedLinkpath]) {
-      const result = {
-        path: normalizedLinkpath,
-        name: basename(normalizedLinkpath)
-      } as TFile;
-      return result;
+      const file = new TFile();
+      file.path = normalizedLinkpath;
+      file.name = basename(normalizedLinkpath);
+      if (!(file instanceof TFile)) {
+        throw new Error('Failed to create TFile instance');
+      }
+      return file;
     }
     return null;
   }
 
-  on() { }
+  on(): void {
+    // Intentionally empty for testing
+  }
 }
 
 describe('LinkUpdater', () => {
@@ -133,10 +124,15 @@ describe('LinkUpdater', () => {
     similarityThreshold: 0.65
   };
 
-  const createSourceFile = (path: string = 'note1.md'): TFile => ({
-    path,
-    name: path
-  } as TFile);
+  const createSourceFile = (path = 'note1.md'): TFile => {
+    const file = new TFile();
+    file.path = path;
+    file.name = path;
+    if (!(file instanceof TFile)) {
+      throw new Error('Failed to create TFile instance');
+    }
+    return file;
+  };
 
   const setupTest = (
     files: { [path: string]: string },
@@ -161,12 +157,12 @@ describe('LinkUpdater', () => {
               link: 'note2.md',
               original: '[link](note2.md)',
             }],
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             frontmatter: undefined
           } as CachedMetadata,
           'note2.md': {
             frontmatter: { title: 'Front Matter Title' },
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -189,12 +185,12 @@ describe('LinkUpdater', () => {
               link: 'note2.md',
               original: '[link](note2.md)',
             }],
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             frontmatter: undefined
           } as CachedMetadata,
           'note2.md': {
             frontmatter: undefined,
-            headings: [{ heading: "Heading Title" }] as HeadingCache[],
+            headings: [{ heading: 'Heading Title' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -224,7 +220,7 @@ describe('LinkUpdater', () => {
               title: 'Dogs 1',
               aliases: ['Hello', 'World']
             },
-            headings: [{ heading: "Different Title" }] as HeadingCache[],
+            headings: [{ heading: 'Different Title' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -333,12 +329,12 @@ describe('LinkUpdater', () => {
               link: 'note2',
               original: '[[note2|link]]',
             }],
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             frontmatter: undefined
           } as CachedMetadata,
           'note2.md': {
             frontmatter: { title: 'Front Matter Title' },
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -368,7 +364,7 @@ describe('LinkUpdater', () => {
               title: 'Dogs 1',
               aliases: ['Hello', 'World']
             },
-            headings: [{ heading: "Different Title" }] as HeadingCache[],
+            headings: [{ heading: 'Different Title' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -391,12 +387,12 @@ describe('LinkUpdater', () => {
               link: 'note2#Subheading',
               original: '[[note2#Subheading|link]]',
             }],
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             frontmatter: undefined
           } as CachedMetadata,
           'note2.md': {
             frontmatter: { title: 'Front Matter Title' },
-            headings: [{ heading: "New Title" }] as HeadingCache[],
+            headings: [{ heading: 'New Title' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -558,7 +554,7 @@ describe('LinkUpdater', () => {
           } as CachedMetadata,
           'dogs.md': {
             frontmatter: undefined,
-            headings: [{ heading: "dogs" }] as HeadingCache[],
+            headings: [{ heading: 'dogs' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -648,14 +644,14 @@ describe('LinkUpdater', () => {
               }
             ],
             frontmatter: undefined,
-            headings: [{ heading: "Heading" }] as HeadingCache[]
+            headings: [{ heading: 'Heading' }] as HeadingCache[]
           } as CachedMetadata,
           'note2.md': {
             frontmatter: {
               title: 'Note 2 Title',
               aliases: []  // Similar to "Hello"
             },
-            headings: [{ heading: "Heading" }] as HeadingCache[],
+            headings: [{ heading: 'Heading' }] as HeadingCache[],
             links: []
           } as CachedMetadata,
           'note3.md': {
@@ -663,7 +659,7 @@ describe('LinkUpdater', () => {
               title: 'Another Title',
               aliases: ['Project Z']  // Similar to "Project X"
             },
-            headings: [{ heading: "Heading" }] as HeadingCache[],
+            headings: [{ heading: 'Heading' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -694,14 +690,14 @@ describe('LinkUpdater', () => {
               }
             ],
             frontmatter: undefined,
-            headings: [{ heading: "Heading" }] as HeadingCache[]
+            headings: [{ heading: 'Heading' }] as HeadingCache[]
           } as CachedMetadata,
           'note2.md': {
             frontmatter: {
               title: 'Note 2 Title',
               aliases: []  // Similar to "Hello"
             },
-            headings: [{ heading: "Heading" }] as HeadingCache[],
+            headings: [{ heading: 'Heading' }] as HeadingCache[],
             links: []
           } as CachedMetadata,
           'note3.md': {
@@ -709,7 +705,7 @@ describe('LinkUpdater', () => {
               title: 'Another Title',
               aliases: ['Project Z']  // Similar to "Project X"
             },
-            headings: [{ heading: "Heading" }] as HeadingCache[],
+            headings: [{ heading: 'Heading' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -740,14 +736,14 @@ describe('LinkUpdater', () => {
               }
             ],
             frontmatter: undefined,
-            headings: [{ heading: "Heading" }] as HeadingCache[]
+            headings: [{ heading: 'Heading' }] as HeadingCache[]
           } as CachedMetadata,
           'note2.md': {
             frontmatter: {
               title: 'Note 2 Title',
               aliases: ['Hello 2']  // Contains "Hello"
             },
-            headings: [{ heading: "Heading" }] as HeadingCache[],
+            headings: [{ heading: 'Heading' }] as HeadingCache[],
             links: []
           } as CachedMetadata,
           'note3.md': {
@@ -755,7 +751,7 @@ describe('LinkUpdater', () => {
               title: 'Another Title',
               aliases: ['My Project Name']  // Contains "Project"
             },
-            headings: [{ heading: "Heading" }] as HeadingCache[],
+            headings: [{ heading: 'Heading' }] as HeadingCache[],
             links: []
           } as CachedMetadata
         }
@@ -790,7 +786,6 @@ describe('LinkUpdater', () => {
         }
       );
 
-      const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
       expect(await vault.read(sourceFile)).toBe('[[  \n\n[Doggos](dogs.md)');
     });
   });

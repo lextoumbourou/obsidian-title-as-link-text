@@ -2,6 +2,10 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
+## [1.1.4] - 🚀 Release version
+
+- Mainly just a code cleanup, and ensuring the all platforms are supported.
+
 ## [1.1.3] - 🐛 Bug Fix
 
 ### Fixed

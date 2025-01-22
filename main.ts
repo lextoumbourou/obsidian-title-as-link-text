@@ -1,7 +1,5 @@
 import {
   Plugin,
-  HeadingCache,
-  FrontMatterCache,
   CachedMetadata,
   TFile,
   Notice,
@@ -10,10 +8,10 @@ import {
   App,
   PluginSettingTab,
   Setting,
-} from "obsidian";
+} from 'obsidian';
 
 function basename(path: string): string {
-  let base = new String(path).substring(path.lastIndexOf("/") + 1);
+  const base = new String(path).substring(path.lastIndexOf('/') + 1);
   return base;
 }
 
@@ -21,14 +19,14 @@ export interface VaultLike {
   getMarkdownFiles(): TFile[];
   read(file: TFile): Promise<string>;
   modify(file: TFile, content: string): Promise<void>;
-  on(name: string, callback: (...args: any[]) => any): void;
+  on(name: string, callback: (file: TFile | TAbstractFile, oldPath?: string) => void): void;
 }
 
 export interface MetadataCacheLike {
   getFileCache(file: TFile): CachedMetadata | null;
   getCache(path: string): CachedMetadata | null;
   getFirstLinkpathDest(linkpath: string, sourcePath: string): TFile | null;
-  on(name: string, callback: (...args: any[]) => any): void;
+  on(name: string, callback: (file: TFile) => void): void;
 }
 
 export interface TitleAsLinkTextSettings {
@@ -55,7 +53,7 @@ export class LinkUpdater {
   async updateAllLinks() {
     const markdownFiles = this.vault.getMarkdownFiles();
 
-    var updatedBacklinksCount = 0;
+    let updatedBacklinksCount = 0;
     for (const file of markdownFiles) {
       const oldPath = file.path;
       const backLinks = await this.updateBackLinks(file, oldPath, false);
@@ -76,19 +74,18 @@ export class LinkUpdater {
 
     let updatedCount = 0;
 
-    // Markdown link regex breakdown:
-    // (?<!\[[ x])     - Negative lookbehind: don't match if preceded by checkbox pattern '[ ]' or '[x]'
-    // \[              - Match literal opening bracket
-    // ([^\]\n]+)      - Group 1: Capture chars that aren't closing bracket or newline
-    // \]              - Match literal closing bracket
-    // \(              - Match literal opening parenthesis
-    // ([^)\n]+)       - Group 2: Capture chars that aren't closing paren or newline
-    // \)              - Match literal closing parenthesis
-    const markdownLinkRegex = /(?<!\[[ x])\[([^\]\n]+)\]\(([^)\n]+)\)/g;
+    // Modified markdown link regex to avoid lookbehind
+    // Instead of excluding checkbox pattern with lookbehind, we'll match and skip them in the replacement function
+    const markdownLinkRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)/g;
 
     let newFileContent = fileContent.replace(
       markdownLinkRegex,
-      (_, linkText, linkUrl) => {
+      (match, linkText, linkUrl) => {
+        // Skip if this is a checkbox pattern
+        if (match.startsWith('[ ]') || match.startsWith('[x]')) {
+          return match;
+        }
+
         const linkUrlDecoded = decodeURIComponent(linkUrl);
         // Remove any #subheading from the link before looking up the file
         const baseLinkUrl = linkUrlDecoded.split('#')[0];
@@ -119,15 +116,16 @@ export class LinkUpdater {
 
     // Wikilinks regex breakdown:
     // \[\[              - Match literal opening double brackets
-    // ([^\]\[\n]+?)     - Group 1: Capture chars that aren't brackets or newline, non-greedy
-    // (?:               - Start non-capturing group
-    //   #([^\]\[\n]+?)  - Group 2: Optional subheading after #, no brackets/newline, non-greedy
-    // )?                - End optional non-capturing group
-    // (?:               - Start non-capturing group
-    //   \|([^\]\[\n]+?) - Group 3: Optional display text after |, no brackets/newline, non-greedy
-    // )?                - End optional non-capturing group
+    // ([^\]\[\n]+?)     - Group 1: Match one or more chars that aren't brackets or newline (non-greedy)
+    //                     This captures the main link path
+    // (?:               - Start non-capturing group for optional subheading
+    //   #([^\]\[\n]+?)  - Group 2: Match # followed by one or more non-bracket/newline chars (non-greedy)
+    // )?                - End optional subheading group
+    // (?:               - Start non-capturing group for optional alias
+    //   \|([^\]\[\n]+?) - Group 3: Match | followed by one or more non-bracket/newline chars (non-greedy)
+    // )?                - End optional alias group
     // \]\]              - Match literal closing double brackets
-    const wikilinkRegex = /\[\[([^\]\[\n]+?)(?:#([^\]\[\n]+?))?(?:\|([^\]\[\n]+?))?\]\]/g
+    const wikilinkRegex = /\[\[([^\][\n]+?)(?:#([^\][\n]+?))?(?:\|([^\][\n]+?))?]]/g;
 
     newFileContent = newFileContent.replace(
       wikilinkRegex,
@@ -179,7 +177,7 @@ export class LinkUpdater {
   async updateBackLinks(file: TFile, oldPath: string, notify: boolean) {
     if (
       !oldPath ||
-      !file.path.toLocaleLowerCase().endsWith(".md") ||
+      !file.path.toLocaleLowerCase().endsWith('.md') ||
       !(file instanceof TFile)
     ) {
       return;
@@ -189,7 +187,7 @@ export class LinkUpdater {
     let updatedBacklinksCount = 0;
 
     // Update backlinks in other notes
-    for (let note of notes) {
+    for (const note of notes) {
       const count = await this.updateLinksInNote(note);
       updatedBacklinksCount += count;
     }
@@ -208,12 +206,12 @@ export class LinkUpdater {
   }
 
   private getCachedNotesThatHaveLinkToFile(filePath: string): TFile[] {
-    let notesWithBacklinks: TFile[] = [];
-    let allNotes = this.vault.getMarkdownFiles();
+    const notesWithBacklinks: TFile[] = [];
+    const allNotes = this.vault.getMarkdownFiles();
 
     if (allNotes) {
-      for (let note of allNotes) {
-        let notePath = note.path;
+      for (const note of allNotes) {
+        const notePath = note.path;
 
         if (note.path == filePath) {
           continue;
@@ -225,7 +223,7 @@ export class LinkUpdater {
           ...(noteCache?.links || []),
         ];
         if (embedsAndLinks) {
-          for (let link_data of embedsAndLinks) {
+          for (const link_data of embedsAndLinks) {
             // getFirstLinkpathDest = Get the best match for a linkpath.
             // https://marcus.se.net/obsidian-plugin-docs/reference/typescript/classes/MetadataCache
             const firstLinkPath = this.metadataCache.getFirstLinkpathDest(
@@ -245,11 +243,11 @@ export class LinkUpdater {
 
   private getPageTitle(cache: CachedMetadata, filePath: string): string {
     const frontMatterTitle =
-      cache.frontmatter && (cache.frontmatter as FrontMatterCache).title;
+      cache.frontmatter && cache.frontmatter.title;
     const firstHeading =
-      cache.headings && cache.headings.length > 0 && (cache.headings[0] as HeadingCache).heading;
+      cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
     return (
-      frontMatterTitle || firstHeading || basename(filePath).replace(".md", "")
+      frontMatterTitle || firstHeading || basename(filePath).replace('.md', '')
     );
   }
 
@@ -342,7 +340,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     );
 
     this.registerEvent(
-      this.app.vault.on("rename", async (file: TAbstractFile, oldPath: string) => {
+      this.app.vault.on('rename', async (file: TAbstractFile, oldPath: string) => {
         if (file instanceof TFile) {
           this.debouncedUpdateBackLinks(file, oldPath, true);
         }
@@ -350,14 +348,14 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     );
 
     this.registerEvent(
-      this.app.metadataCache.on("changed", async (file: TFile) => {
+      this.app.metadataCache.on('changed', async (file: TFile) => {
         this.debouncedUpdateBackLinks(file, file.path, true);
       })
     );
 
     this.addCommand({
-      id: "update-all-links",
-      name: "Update All Links",
+      id: 'update-all-links',
+      name: 'Update All Links',
       callback: async () => {
         const count = await this.linkUpdater.updateAllLinks();
         new Notice(`Updated the link text of ${count} Markdown link(s).`);

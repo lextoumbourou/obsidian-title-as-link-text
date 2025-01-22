@@ -1,7 +1,5 @@
 export class Plugin {
-  app: any;
-  registerEvent(_: any) {}
-  addCommand(_: any) {}
+  app: unknown;
 }
 
 export class TFile {
@@ -25,7 +23,7 @@ export interface HeadingCache {
 
 export interface FrontMatterCache {
   title?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface CachedMetadata {
@@ -41,12 +39,17 @@ export interface CachedMetadata {
   frontmatter?: FrontMatterCache;
 }
 
-export function debounce(func: Function, timeout: number, immediate?: boolean) {
+export function debounce(
+  func: (...args: unknown[]) => unknown,
+  _timeout: number,
+  _immediate?: boolean
+) {
   return func;
 }
 
 export class Notice {
   constructor(message: string) {
+    // eslint-disable-next-line no-console
     console.log(message);
   }
 }
