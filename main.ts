@@ -74,8 +74,18 @@ export class LinkUpdater {
 
     let updatedCount = 0;
 
-    // Modified markdown link regex to avoid lookbehind
-    // Instead of excluding checkbox pattern with lookbehind, we'll match and skip them in the replacement function
+    // Markdown link regex breakdown:
+    // \[                     - Match opening square bracket
+    // ([^\]\n]+)            - Group 1: Match link text
+    //                         [^\]\n] = any char except ] or newline
+    //                         + = one or more (greedy)
+    // \]                     - Match closing square bracket
+    // \(                     - Match opening parenthesis
+    // ([^)\n]+)             - Group 2: Match URL/path
+    //                         [^)\n] = any char except ) or newline
+    //                         + = one or more (greedy)
+    // \)                     - Match closing parenthesis
+    // g                      - Global flag: match all occurrences
     const markdownLinkRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)/g;
 
     let newFileContent = fileContent.replace(
