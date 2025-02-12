@@ -365,7 +365,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
 
     this.addCommand({
       id: 'update-all-links',
-      name: 'Update All Links',
+      name: 'Update all links',
       callback: async () => {
         const count = await this.linkUpdater.updateAllLinks();
         new Notice(`Updated the link text of ${count} Markdown link(s).`);

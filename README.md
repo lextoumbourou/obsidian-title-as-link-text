@@ -84,7 +84,7 @@ For Markdown-style users:
 
 ## 🛠️ Commands
 
-- `Update All Links`: One-click update for all existing links in your vault
+- `Update all links`: One-click update for all existing links in your vault
 
 ## 👩‍💻 Development
 
