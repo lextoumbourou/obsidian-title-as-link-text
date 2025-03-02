@@ -180,7 +180,7 @@ describe('LinkUpdater - Markdown links', () => {
       }],
       frontmatter: undefined,
       headings: [{heading: 'Heading 1', level: 1} as HeadingCache, {heading: 'Heading 2', level: 2} as HeadingCache],
-    }
+    };
     const { linkUpdater, sourceFile, vault } = setupTest(
       {
         'note1.md': '# Heading 1\n\nLink: [Heading 2](#heading-2)\n\n## Heading 2'
