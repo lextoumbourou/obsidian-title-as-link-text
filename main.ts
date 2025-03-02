@@ -8,6 +8,8 @@ import {
   App,
   PluginSettingTab,
   Setting,
+  Vault,
+  MetadataCache,
 } from 'obsidian';
 
 function basename(path: string): string {
@@ -43,8 +45,8 @@ export class LinkUpdater {
   private settings: TitleAsLinkTextSettings;
 
   constructor(
-    private vault: VaultLike,
-    private metadataCache: MetadataCacheLike,
+    private vault: Vault,
+    private metadataCache: MetadataCache,
     settings: TitleAsLinkTextSettings
   ) {
     this.settings = settings;

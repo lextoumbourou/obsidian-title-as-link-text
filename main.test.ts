@@ -1,20 +1,19 @@
 import { TFile, CachedMetadata, HeadingCache } from 'obsidian';
-import { LinkUpdater, VaultLike, MetadataCacheLike } from './main';
+import { LinkUpdater } from './main';
+import { Vault, MetadataCache } from 'obsidian';
 
-// Define proper types for App
 interface MockAppInterface {
-  vault: VaultLike;
-  metadataCache: MetadataCacheLike;
+  vault: Vault;
+  metadataCache: MetadataCache;
 }
 
-// Mock the required Obsidian imports
 jest.mock('obsidian', () => ({
   Plugin: class MockPlugin {
     app: MockAppInterface;
     constructor() {
       this.app = {
-        vault: {} as VaultLike,
-        metadataCache: {} as MetadataCacheLike
+        vault: {} as Vault,
+        metadataCache: {} as MetadataCache
       };
     }
     registerEvent(): void { /* Mock implementation */ }
@@ -39,83 +38,23 @@ jest.mock('obsidian', () => ({
   Notice: jest.fn(),
   debounce: (fn: () => void) => fn,
   TFile: class { },
+  Vault: jest.fn().mockImplementation(() => ({
+    getMarkdownFiles: jest.fn(),
+    read: jest.fn(),
+    modify: jest.fn(),
+    on: jest.fn(),
+  })),
+  MetadataCache: jest.fn().mockImplementation(() => ({
+    getFileCache: jest.fn(),
+    getCache: jest.fn(),
+    getFirstLinkpathDest: jest.fn(),
+    on: jest.fn(),
+  })),
 }));
 
-function basename(path: string): string {
-  const base = new String(path).substring(path.lastIndexOf('/') + 1);
-  return base;
-}
-
-// Mock implementation of Vault
-class MockVault implements VaultLike {
-  private files: Map<string, string> = new Map();
-
-  constructor(initialFiles: { [path: string]: string }) {
-    Object.entries(initialFiles).forEach(([path, content]) => {
-      this.files.set(path, content);
-    });
-  }
-
-  getMarkdownFiles(): TFile[] {
-    return Array.from(this.files.keys()).map(path => {
-      const file = new TFile();
-      file.path = path;
-      file.name = basename(path);
-      if (!(file instanceof TFile)) {
-        throw new Error('Failed to create TFile instance');
-      }
-      return file;
-    });
-  }
-
-  async read(file: TFile): Promise<string> {
-    return this.files.get(file.path) || '';
-  }
-
-  async modify(file: TFile, content: string): Promise<void> {
-    this.files.set(file.path, content);
-  }
-
-  on(): void {
-    // Intentionally empty for testing
-  }
-}
-
-// Mock implementation of MetadataCache
-class MockMetadataCache implements MetadataCacheLike {
-  constructor(private fileCache: { [path: string]: CachedMetadata }) { }
-
-  getFileCache(file: TFile): CachedMetadata | null {
-    return this.fileCache[file.path] || null;
-  }
-
-  getCache(path: string): CachedMetadata | null {
-    return this.fileCache[path] || null;
-  }
-
-  getFirstLinkpathDest(linkpath: string, _sourcePath: string): TFile | null {
-    // Prefix unused parameter with underscore
-    const normalizedLinkpath = linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`;
-    if (this.fileCache[normalizedLinkpath]) {
-      const file = new TFile();
-      file.path = normalizedLinkpath;
-      file.name = basename(normalizedLinkpath);
-      if (!(file instanceof TFile)) {
-        throw new Error('Failed to create TFile instance');
-      }
-      return file;
-    }
-    return null;
-  }
-
-  on(): void {
-    // Intentionally empty for testing
-  }
-}
-
 describe('LinkUpdater', () => {
-  let vault: MockVault;
-  let metadataCache: MockMetadataCache;
+  let vault: jest.Mocked<Vault>;
+  let metadataCache: jest.Mocked<MetadataCache>;
   let linkUpdater: LinkUpdater;
   let sourceFile: TFile;
 
@@ -138,8 +77,41 @@ describe('LinkUpdater', () => {
     files: { [path: string]: string },
     metadata: { [path: string]: CachedMetadata }
   ) => {
-    vault = new MockVault(files);
-    metadataCache = new MockMetadataCache(metadata);
+    vault = new Vault() as jest.Mocked<Vault>;
+    metadataCache = new MetadataCache() as jest.Mocked<MetadataCache>;
+
+    vault.getMarkdownFiles.mockReturnValue(
+      Object.keys(files).map(path => {
+        const file = createSourceFile(path);
+        return file;
+      })
+    );
+
+    vault.read.mockImplementation((file: TFile) => {
+      return Promise.resolve(files[file.path] || '');
+    });
+
+    vault.modify.mockImplementation((file: TFile, content: string) => {
+      files[file.path] = content;
+      return Promise.resolve();
+    });
+
+    metadataCache.getFileCache.mockImplementation((file: TFile) => {
+      return metadata[file.path] || null;
+    });
+
+    metadataCache.getCache.mockImplementation((path: string) => {
+      return metadata[path] || null;
+    });
+
+    metadataCache.getFirstLinkpathDest.mockImplementation((linkpath: string, _sourcePath: string) => {
+      const normalizedLinkpath = linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`;
+      if (metadata[normalizedLinkpath]) {
+        return createSourceFile(normalizedLinkpath);
+      }
+      return null;
+    });
+
     linkUpdater = new LinkUpdater(vault, metadataCache, defaultSettings);
     sourceFile = createSourceFile();
   };
