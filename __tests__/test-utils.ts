@@ -1,4 +1,4 @@
-import { TFile, CachedMetadata, HeadingCache } from 'obsidian';
+import { TFile, CachedMetadata } from 'obsidian';
 import { LinkUpdater } from '../main';
 import { Vault, MetadataCache } from 'obsidian';
 
@@ -104,7 +104,7 @@ export const setupTest = (
   });
 
   metadataCache.getFirstLinkpathDest.mockImplementation((linkpath: string, _sourcePath: string) => {
-    const normalizedLinkpath = linkpath.endsWith('.md') ? linkpath : `${linkpath}.md`;
+    const normalizedLinkpath = linkpath.endsWith('.md') || linkpath === '' ? linkpath : `${linkpath}.md`;
     if (metadata[normalizedLinkpath]) {
       return createSourceFile(normalizedLinkpath);
     }
