@@ -2,7 +2,7 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
-## [1.1.5] - 🐛 Bug Fix
+## [1.1.6] - 🐛 Bug Fix
 
 - Prevent updating of image alt text when using `![Alt text](some-img.jpg)`.
 - Don't change link text if pointing to a header within the same document. (#3)

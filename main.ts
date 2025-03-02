@@ -17,20 +17,6 @@ function basename(path: string): string {
   return base;
 }
 
-export interface VaultLike {
-  getMarkdownFiles(): TFile[];
-  read(file: TFile): Promise<string>;
-  modify(file: TFile, content: string): Promise<void>;
-  on(name: string, callback: (file: TFile | TAbstractFile, oldPath?: string) => void): void;
-}
-
-export interface MetadataCacheLike {
-  getFileCache(file: TFile): CachedMetadata | null;
-  getCache(path: string): CachedMetadata | null;
-  getFirstLinkpathDest(linkpath: string, sourcePath: string): TFile | null;
-  on(name: string, callback: (file: TFile) => void): void;
-}
-
 export interface TitleAsLinkTextSettings {
   debounceDelay: number;
   similarityThreshold: number;
