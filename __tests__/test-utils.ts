@@ -104,7 +104,11 @@ export const setupTest = (
   });
 
   metadataCache.getFirstLinkpathDest.mockImplementation((linkpath: string, _sourcePath: string) => {
-    const normalizedLinkpath = linkpath.endsWith('.md') || linkpath === '' ? linkpath : `${linkpath}.md`;
+    let normalizedLinkpath = linkpath;
+    if (linkpath !== '' && !linkpath.includes('.') && !linkpath.endsWith('.md')) {
+      normalizedLinkpath = `${linkpath}.md`;
+    }
+
     if (metadata[normalizedLinkpath]) {
       return createSourceFile(normalizedLinkpath);
     }
