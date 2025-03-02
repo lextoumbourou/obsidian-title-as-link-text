@@ -8,6 +8,7 @@ module.exports = {
   moduleNameMapper: {
     '^obsidian$': '<rootDir>/__mocks__/obsidian.ts'
   },
-  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
-  testPathIgnorePatterns: ['/node_modules/', '/dist/', '\\.js$']
+  testRegex: '(/__tests__/(?!.*utils).*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '\\.js$', '.*utils\\.ts$'],
+  verbose: true
 }; 
