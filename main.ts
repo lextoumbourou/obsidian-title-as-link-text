@@ -101,6 +101,12 @@ export class LinkUpdater {
         const linkUrlDecoded = decodeURIComponent(linkUrl);
         // Remove any #subheading from the link before looking up the file
         const baseLinkUrl = linkUrlDecoded.split('#')[0];
+
+        // If it's not a link to a file, don't update it.
+        if (baseLinkUrl == '') {
+          return match;
+        }
+
         const linkedFile = this.metadataCache.getFirstLinkpathDest(baseLinkUrl, file.path);
         if (linkedFile) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
