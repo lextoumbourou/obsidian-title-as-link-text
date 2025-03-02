@@ -93,7 +93,7 @@ export class LinkUpdater {
     let newFileContent = fileContent.replace(
       markdownLinkRegex,
       (match, linkText, linkUrl) => {
-        // Skip if this is a checkbox pattern
+        // Skip if this is a checkbox pattern.
         if (match.startsWith('[ ]') || match.startsWith('[x]')) {
           return match;
         }
@@ -108,7 +108,7 @@ export class LinkUpdater {
         }
 
         const linkedFile = this.metadataCache.getFirstLinkpathDest(baseLinkUrl, file.path);
-        if (linkedFile) {
+        if (linkedFile && linkedFile.name.endsWith('.md')) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const aliases = this.getAliases(linkedCache);
