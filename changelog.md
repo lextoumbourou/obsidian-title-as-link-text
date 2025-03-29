@@ -2,6 +2,14 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
+## [1.1.7] - ✨ Feature Add
+
+### Added
+
+- Added new command: `Update links for current file`<br>
+  Updates only the currently active note instead of the entire vault -- useful for large vaults or making isolated changes.<br>
+  _(Note that this is the command that runs automatically when editing a note.)_
+
 ## [1.1.6] - 🐛 Bug Fix
 
 - Prevent updating of image alt text when using `![Alt text](some-img.jpg)`.
@@ -51,6 +59,6 @@ aliases:
 
 - Added 1-second timeout for better performance
 
----
+--------------------------------------------------------------------------------
 
 📝 **Note**: Versions are listed from newest to oldest
