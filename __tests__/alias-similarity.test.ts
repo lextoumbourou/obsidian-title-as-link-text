@@ -139,4 +139,71 @@ describe('LinkUpdater - Alias similarity', () => {
     expect(updatedCount).toEqual(2);
     expect(await vault.read(sourceFile)).toEqual('Here is a [Hello 2](note2.md) and another [My Project Name](note3.md)');
   });
+
+  it('ensure exact title matching wins over aliases', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'This is a [Thing](thing.md)',
+        'thing.md': 'Content of note 2',
+      },
+      {
+        'note1.md': {
+          links: [
+            {
+              link: 'thing.md',
+              original: '[Thing](thing.md)',
+            },
+          ],
+          frontmatter: undefined,
+          headings: [{ heading: 'Heading' }] as HeadingCache[]
+        } as CachedMetadata,
+        'thing.md': {
+          frontmatter: {
+            title: 'Thing',
+            aliases: ['Things']
+          },
+          headings: [{ heading: 'Heading' }] as HeadingCache[],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toEqual(0);
+    expect(await vault.read(sourceFile)).toEqual('This is a [Thing](thing.md)');
+  });
+
+  it('ensure exact title matching wins over aliases - case insensitive', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'This is a [THING](thing.md)',
+        'thing.md': 'Content of note 2',
+      },
+      {
+        'note1.md': {
+          links: [
+            {
+              link: 'thing.md',
+              original: '[Thing](thing.md)',
+            },
+          ],
+          frontmatter: undefined,
+          headings: [{ heading: 'Heading' }] as HeadingCache[]
+        } as CachedMetadata,
+        'thing.md': {
+          frontmatter: {
+            title: 'Thing',
+            aliases: ['Things']
+          },
+          headings: [{ heading: 'Heading' }] as HeadingCache[],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toEqual(1);
+    expect(await vault.read(sourceFile)).toEqual('This is a [Thing](thing.md)');
+  });
+
 }); 

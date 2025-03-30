@@ -97,6 +97,19 @@ export class LinkUpdater {
         if (linkedFile && linkedFile.name.endsWith('.md')) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
+            const title = this.getPageTitle(linkedCache, linkedFile.path);
+
+            // If the current link text matches the title exactly, don't try to find an alias
+            if (linkText === title) {
+              return match;
+            }
+
+            // If it matches on case-insensitive, use the title
+            if (linkText.toLowerCase() === title.toLowerCase()) {
+              updatedCount++;
+              return `[${title}](${linkUrl})`;
+            }
+
             const aliases = this.getAliases(linkedCache);
             // Find the most similar alias if one exists
             const similarAlias = this.findMostSimilarAlias(linkText, aliases);
