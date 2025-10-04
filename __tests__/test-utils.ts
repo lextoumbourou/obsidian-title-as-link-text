@@ -58,7 +58,8 @@ export const defaultSettings = {
   debounceDelay: 1000,
   similarityThreshold: 0.65,
   useFrontmatterTitle: true,
-  useFirstHeading: true
+  useFirstHeading: true,
+  autoUpdate: true
 };
 
 export const createSourceFile = (path = 'note1.md'): TFile => {

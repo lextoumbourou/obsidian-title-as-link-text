@@ -4,7 +4,9 @@ All notable changes to the Title As Link Text plugin will be documented in this 
 
 ## [1.1.8] - ⚙️ Settings toggle and bug fix
 
+- Add auto-update toggle to disable automatic link updates on save/rename
 - Add settings toggle to turn off front matter and/or first heading as title source. (#8)
+- Skip updating links with subheadings/anchors (e.g., `[[Page#Heading]]`, `[[Page#^quote]]`)
 - Handle links in headings. (#10)
 
 ## [1.1.7] - ✨ Features and Fixes

@@ -9,7 +9,7 @@ import {
   PluginSettingTab,
   Setting,
   Vault,
-  MetadataCache,
+  MetadataCache
 } from 'obsidian';
 
 function basename(path: string): string {
@@ -22,13 +22,15 @@ export interface TitleAsLinkTextSettings {
   similarityThreshold: number;
   useFrontmatterTitle: boolean;
   useFirstHeading: boolean;
+  autoUpdate: boolean;
 }
 
 const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
   debounceDelay: 1000,
   similarityThreshold: 0.65,
   useFrontmatterTitle: true,
-  useFirstHeading: true
+  useFirstHeading: true,
+  autoUpdate: true
 };
 
 export class LinkUpdater {
@@ -151,13 +153,16 @@ export class LinkUpdater {
     newFileContent = newFileContent.replace(
       wikilinkRegex,
       (match, linkPath, subheading, linkText) => {
+        // Skip links with subheadings/anchors (e.g., [[Page#Header]], [[Page#^quote]])
+        if (subheading) {
+          return match;
+        }
+
         const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, file.path);
         if (linkedFile) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const title = this.getPageTitle(linkedCache, linkedFile.path);
-            const subheadingPart = subheading ? `#${subheading}` : '';
-            const linkPart = `${linkPath}${subheadingPart}`;
 
             if (linkText) {
               // If the current link text matches the title exactly, don't try to find an alias
@@ -169,18 +174,18 @@ export class LinkUpdater {
               const similarAlias = this.findMostSimilarAlias(linkText, aliases);
               if (similarAlias && similarAlias !== linkText) {
                 updatedCount++;
-                return `[[${linkPart}|${similarAlias}]]`;
+                return `[[${linkPath}|${similarAlias}]]`;
               }
               if (!similarAlias && linkText !== title) {
                 updatedCount++;
-                return linkPart !== title ? `[[${linkPart}|${title}]]` : `[[${linkPart}]]`;
+                return linkPath !== title ? `[[${linkPath}|${title}]]` : `[[${linkPath}]]`;
               }
             } else {
               // Handle links without display text
               const baseLinkName = linkPath.split('/').pop()?.replace('.md', '') || '';
               if (title && title !== baseLinkName) {
                 updatedCount++;
-                return linkPart !== title ? `[[${linkPart}|${title}]]` : `[[${linkPart}]]`;
+                return linkPath !== title ? `[[${linkPath}|${title}]]` : `[[${linkPath}]]`;
               }
             }
           }
@@ -373,7 +378,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
 
     this.registerEvent(
       this.app.vault.on('rename', async (file: TAbstractFile, oldPath: string) => {
-        if (file instanceof TFile) {
+        if (this.settings.autoUpdate && file instanceof TFile) {
           this.debouncedUpdateBackLinks(file, oldPath, true);
         }
       })
@@ -381,7 +386,9 @@ export default class TitleAsLinkTextPlugin extends Plugin {
 
     this.registerEvent(
       this.app.metadataCache.on('changed', async (file: TFile) => {
-        this.debouncedUpdateBackLinks(file, file.path, true);
+        if (this.settings.autoUpdate) {
+          this.debouncedUpdateBackLinks(file, file.path, true);
+        }
       })
     );
 
@@ -439,6 +446,16 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Auto-update')
+      .setDesc('Automatically update links when notes are saved or renamed')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.autoUpdate)
+        .onChange(async (value) => {
+          this.plugin.settings.autoUpdate = value;
+          await this.plugin.saveSettings();
+        }));
 
     new Setting(containerEl)
       .setName('Title source')

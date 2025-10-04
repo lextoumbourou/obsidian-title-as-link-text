@@ -40,7 +40,8 @@ describe('LinkUpdater - Title source settings', () => {
       debounceDelay: 1000,
       similarityThreshold: 0.65,
       useFrontmatterTitle: false,
-      useFirstHeading: true
+      useFirstHeading: true,
+      autoUpdate: true
     });
 
     const sourceFile = createSourceFile('note1.md');
@@ -87,7 +88,8 @@ describe('LinkUpdater - Title source settings', () => {
       debounceDelay: 1000,
       similarityThreshold: 0.65,
       useFrontmatterTitle: true,
-      useFirstHeading: false
+      useFirstHeading: false,
+      autoUpdate: true
     });
 
     const sourceFile = createSourceFile('note1.md');
@@ -134,7 +136,8 @@ describe('LinkUpdater - Title source settings', () => {
       debounceDelay: 1000,
       similarityThreshold: 0.65,
       useFrontmatterTitle: false,
-      useFirstHeading: false
+      useFirstHeading: false,
+      autoUpdate: true
     });
 
     const sourceFile = createSourceFile('note1.md');

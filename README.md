@@ -88,6 +88,8 @@ For Markdown-style users:
 
 ## ⚙️ Settings
 
+- **Auto-update**: Automatically update links when notes are saved or renamed (enabled by default). When disabled, links will only update when you run the update commands manually.
+
 ### Title Source
 
 - **Title from frontmatter**: Use the title field from frontmatter as the link text (enabled by default)

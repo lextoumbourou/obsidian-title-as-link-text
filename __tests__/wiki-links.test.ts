@@ -60,7 +60,7 @@ describe('LinkUpdater - Wiki links', () => {
     expect(await vault.read(sourceFile)).toBe('Here is a [[note2|World]]');
   });
 
-  it('should update wikilink text with subheading based on frontmatter title', async () => {
+  it('should not update wikilink text with subheading', async () => {
     const { linkUpdater, sourceFile, vault } = setupTest(
       {
         'note1.md': 'Here is a [[note2#Subheading|link]]',
@@ -84,8 +84,8 @@ describe('LinkUpdater - Wiki links', () => {
     );
 
     const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
-    expect(updatedCount).toBe(1);
-    expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Subheading|Front Matter Title]]');
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Subheading|link]]');
   });
 
   it('should add display text to wikilink without alias when title differs', async () => {
@@ -196,7 +196,7 @@ describe('LinkUpdater - Wiki links', () => {
     expect(await vault.read(sourceFile)).toBe('Here is a [[folder/note2|Different Title]]');
   });
 
-  it('should handle wikilinks with subheadings but no display text', async () => {
+  it('should not update wikilinks with subheadings but no display text', async () => {
     const { linkUpdater, sourceFile, vault } = setupTest(
       {
         'note1.md': 'Here is a [[note2#Section]]',
@@ -219,8 +219,8 @@ describe('LinkUpdater - Wiki links', () => {
     );
 
     const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
-    expect(updatedCount).toBe(1);
-    expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Section|Different Title]]');
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('Here is a [[note2#Section]]');
   });
 
   it('should not add display text to wikilink when heading matches filename', async () => {
