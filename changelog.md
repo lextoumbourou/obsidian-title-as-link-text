@@ -2,8 +2,9 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
-## [1.1.8] - Fixes (in progress)
+## [1.1.8] - ⚙️ Settings toggle and bug fix
 
+- Add settings toggle to turn off front matter and/or first heading as title source. (#8)
 - Handle links in headings. (#10)
 
 ## [1.1.7] - ✨ Features and Fixes

@@ -86,6 +86,20 @@ For Markdown-style users:
 - [Wikilinks To Markdown](https://github.com/agathauy/wikilinks-to-mdlinks-obsidian): Convert existing Wikilinks
 - [Front Matter Title](https://github.com/snezhig/obsidian-front-matter-title): Consistent title display
 
+## ⚙️ Settings
+
+### Title Source
+
+- **Title from frontmatter**: Use the title field from frontmatter as the link text (enabled by default)
+- **Title from first heading**: Use the first heading in the note as the link text (enabled by default)
+
+Both options can be toggled independently. When disabled, the plugin falls back to the next available source, ultimately defaulting to the filename.
+
+### Advanced
+
+- **Debounce delay**: How long to wait (in milliseconds) before updating links after a change (default: 1000ms)
+- **Similarity threshold**: Minimum similarity score (0.0 to 1.0) required for alias matching. Higher values require closer matches (default: 0.65)
+
 ## 🛠️ Commands
 
 - `Update all links`: One-click update for all existing links in your vault
