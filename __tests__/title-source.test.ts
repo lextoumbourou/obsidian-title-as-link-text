@@ -1,4 +1,4 @@
-import { setupTest, createSourceFile } from './test-utils';
+import { createSourceFile } from './test-utils';
 import { CachedMetadata, HeadingCache, Vault, MetadataCache } from 'obsidian';
 import { LinkUpdater } from '../main';
 
