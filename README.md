@@ -99,6 +99,18 @@ npm install
 npm run build
 ```
 
+Or to run dev server:
+
+```bash
+npm run dev
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
 ## 📄 License
 
 MIT

@@ -263,9 +263,8 @@ export class LinkUpdater {
       cache.frontmatter && cache.frontmatter.title;
     const firstHeading =
       cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
-    return (
-      frontMatterTitle || firstHeading || basename(filePath).replace('.md', '')
-    );
+    const title = frontMatterTitle || firstHeading || basename(filePath).replace('.md', '');
+    return this.stripLinkElements(title);
   }
 
   private getAliases(cache: CachedMetadata): string[] {
@@ -333,6 +332,18 @@ export class LinkUpdater {
     const distance = matrix[str1.length][str2.length];
     const maxLength = Math.max(str1.length, str2.length);
     return 1 - (distance / maxLength);
+  }
+
+  private stripLinkElements(text: string): string {
+    // Strip markdown links: [text](url) -> text
+    let result = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+
+    // Strip wikilinks: [[link|text]] -> text, [[link]] -> link
+    result = result.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (match, link, displayText) => {
+      return displayText || link;
+    });
+
+    return result;
   }
 }
 
