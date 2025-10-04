@@ -33,7 +33,9 @@ jest.mock('obsidian', () => ({
   Setting: jest.fn().mockImplementation(() => ({
     setName: jest.fn().mockReturnThis(),
     setDesc: jest.fn().mockReturnThis(),
+    setHeading: jest.fn().mockReturnThis(),
     addText: jest.fn().mockReturnThis(),
+    addToggle: jest.fn().mockReturnThis(),
   })),
   Notice: jest.fn(),
   debounce: (fn: () => void) => fn,
@@ -54,7 +56,9 @@ jest.mock('obsidian', () => ({
 
 export const defaultSettings = {
   debounceDelay: 1000,
-  similarityThreshold: 0.65
+  similarityThreshold: 0.65,
+  useFrontmatterTitle: true,
+  useFirstHeading: true
 };
 
 export const createSourceFile = (path = 'note1.md'): TFile => {

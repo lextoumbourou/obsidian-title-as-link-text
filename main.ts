@@ -20,11 +20,15 @@ function basename(path: string): string {
 export interface TitleAsLinkTextSettings {
   debounceDelay: number;
   similarityThreshold: number;
+  useFrontmatterTitle: boolean;
+  useFirstHeading: boolean;
 }
 
 const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
   debounceDelay: 1000,
-  similarityThreshold: 0.65
+  similarityThreshold: 0.65,
+  useFrontmatterTitle: true,
+  useFirstHeading: true
 };
 
 export class LinkUpdater {
@@ -260,9 +264,9 @@ export class LinkUpdater {
 
   private getPageTitle(cache: CachedMetadata, filePath: string): string {
     const frontMatterTitle =
-      cache.frontmatter && cache.frontmatter.title;
+      this.settings.useFrontmatterTitle && cache.frontmatter && cache.frontmatter.title;
     const firstHeading =
-      cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
+      this.settings.useFirstHeading && cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
     const title = frontMatterTitle || firstHeading || basename(filePath).replace('.md', '');
     return this.stripLinkElements(title);
   }
@@ -435,6 +439,34 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Title source')
+      .setHeading();
+
+    new Setting(containerEl)
+      .setName('Title from frontmatter')
+      .setDesc('Use the title field from frontmatter as the link text (if available)')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.useFrontmatterTitle)
+        .onChange(async (value) => {
+          this.plugin.settings.useFrontmatterTitle = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Title from first heading')
+      .setDesc('Use the first heading in the note as the link text')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.useFirstHeading)
+        .onChange(async (value) => {
+          this.plugin.settings.useFirstHeading = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Advanced')
+      .setHeading();
 
     new Setting(containerEl)
       .setName('Debounce delay')
