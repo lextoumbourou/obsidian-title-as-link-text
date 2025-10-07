@@ -58,6 +58,7 @@ export const defaultSettings = {
   debounceDelay: 1000,
   similarityThreshold: 0.65,
   useFrontmatterTitle: true,
+  frontmatterTitleProperty: 'title',
   useFirstHeading: true,
   autoUpdate: true
 };

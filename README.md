@@ -57,7 +57,7 @@ This plugin can modify multiple files when notes with backlinks are changed. **P
 
 ### Title Inference Logic
 
-1. **Frontmatter First**: Checks for `title` in frontmatter
+1. **Frontmatter First**: Checks for a configured property in frontmatter (default: `title`)
 
   ```yaml
   ---
@@ -93,14 +93,16 @@ For Markdown-style users:
 ### Title Source
 
 - **Title from frontmatter**: Use the title field from frontmatter as the link text (enabled by default)
+- **Frontmatter property**: The frontmatter property to use for getting the title (default: `title`). This allows you to use custom properties like `name`, `heading`, or any other field in your frontmatter.
 - **Title from first heading**: Use the first heading in the note as the link text (enabled by default)
 
-Both options can be toggled independently. When disabled, the plugin falls back to the next available source, ultimately defaulting to the filename.
+Both title source options can be toggled independently. When disabled, the plugin falls back to the next available source, ultimately defaulting to the filename.
 
 ### Advanced
 
 - **Debounce delay**: How long to wait (in milliseconds) before updating links after a change (default: 1000ms)
 - **Similarity threshold**: Minimum similarity score (0.0 to 1.0) required for alias matching. Higher values require closer matches (default: 0.65)
+- **Reset to defaults**: Button to quickly reset all settings to their default values
 
 ## 🛠️ Commands
 

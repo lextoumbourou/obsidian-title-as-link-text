@@ -8,3 +8,4 @@ node_modules
 main.js
 main.test.js
 obsidian.js
+data.json

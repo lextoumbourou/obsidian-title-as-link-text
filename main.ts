@@ -21,6 +21,7 @@ export interface TitleAsLinkTextSettings {
   debounceDelay: number;
   similarityThreshold: number;
   useFrontmatterTitle: boolean;
+  frontmatterTitleProperty: string;
   useFirstHeading: boolean;
   autoUpdate: boolean;
 }
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
   debounceDelay: 1000,
   similarityThreshold: 0.65,
   useFrontmatterTitle: true,
+  frontmatterTitleProperty: 'title',
   useFirstHeading: true,
   autoUpdate: true
 };
@@ -269,7 +271,7 @@ export class LinkUpdater {
 
   private getPageTitle(cache: CachedMetadata, filePath: string): string {
     const frontMatterTitle =
-      this.settings.useFrontmatterTitle && cache.frontmatter && cache.frontmatter.title;
+      this.settings.useFrontmatterTitle && cache.frontmatter && cache.frontmatter[this.settings.frontmatterTitleProperty];
     const firstHeading =
       this.settings.useFirstHeading && cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
     const title = frontMatterTitle || firstHeading || basename(filePath).replace('.md', '');
@@ -472,6 +474,19 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
         }));
 
     new Setting(containerEl)
+      .setName('Frontmatter property')
+      .setDesc('The frontmatter property to use for getting the title')
+      .addText(text => text
+        .setPlaceholder('title')
+        .setValue(this.plugin.settings.frontmatterTitleProperty)
+        .onChange(async (value) => {
+          if (value.trim()) {
+            this.plugin.settings.frontmatterTitleProperty = value.trim();
+            await this.plugin.saveSettings();
+          }
+        }));
+
+    new Setting(containerEl)
       .setName('Title from first heading')
       .setDesc('Use the first heading in the note as the link text')
       .addToggle(toggle => toggle
@@ -511,6 +526,18 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
             this.plugin.settings.similarityThreshold = threshold;
             await this.plugin.saveSettings();
           }
+        }));
+
+    new Setting(containerEl)
+      .setName('Reset to defaults')
+      .setDesc('Reset all settings to their default values')
+      .addButton(button => button
+        .setButtonText('Reset')
+        .setWarning()
+        .onClick(async () => {
+          this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS) as TitleAsLinkTextSettings;
+          await this.plugin.saveSettings();
+          this.display();
         }));
   }
 }

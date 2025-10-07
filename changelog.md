@@ -2,6 +2,11 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
+## [1.1.9] - ⚙️  Enhanced Settings
+
+- **Configurable Frontmatter Property**: You can now specify which frontmatter property to use for getting the title (defaults to `title`). This allows you to use custom properties like `name`, `heading`, or any other field in your frontmatter.
+- **Reset to Defaults Button**: Added a button in settings to quickly reset all configuration options to their default values.
+
 ## [1.1.8] - ⚙️  Settings toggle and bug fix
 
 - Skip updating links with subheadings/anchors (e.g., `[[Page#Heading]]`, `[[Page#^quote]]`) (#6)
@@ -10,8 +15,6 @@ All notable changes to the Title As Link Text plugin will be documented in this 
 - Handle links in headings. (#10)
 
 ## [1.1.7] - ✨ Features and Fixes
-
-### Added
 
 - Added new command: `Update links for current file`<br>
   Updates only the currently active note instead of the entire vault -- useful for large vaults or making isolated changes.<br>
