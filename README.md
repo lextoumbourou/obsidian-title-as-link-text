@@ -4,9 +4,11 @@
 
 > Transform your Obsidian links from plain filenames into meaningful titles automatically! 🔄
 
+![Example transformation](example.gif)
+
 ## ✨ What It Does
 
-Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligently transforms your links to use note titles instead of filenames. Whether you're using Markdown-style links or Wikilinks.
+Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligently transforms your links to use note titles instead of filenames, whether you're using Markdown-style links or Wikilinks.
 
 **Before:**
 
@@ -33,25 +35,17 @@ Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligen
 - **Alias Support**: Respects your custom aliases with smart matching
 - **Automatic Updates**: Links update automatically when you save or rename files
 
-## 🎯 Perfect For
-
-- Zettelkasten enthusiasts using timestamp-based filenames
-- Writers who want readable titles with special characters (`?`, `,`, etc.)
-- Anyone seeking a cleaner, more professional-looking vault
-
 ## ⚠️ WARNING
 
 This plugin can modify multiple files when notes with backlinks are changed. **Please backup your vault before using.**
 
 ## 🚀 Installation
 
-### Via BRAT (Recommended for Beta Access)
+Title As Link Text is available as a Community Plugin.
 
-1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat)
-2. Navigate to Settings → Community Plugins → Obsidian42 - BRAT
-3. Click "Add Beta plugin"
-4. Enter: `lextoumbourou/obsidian-title-as-link-text`
-5. Enable "Title As Link Text" under Community Plugins
+1. Open **Settings** > **Community Plugins** > **Browse**
+2. Search for **Title As Link Text**
+3. Click **Install**
 
 ## 🔧 How It Works
 
@@ -111,6 +105,10 @@ Both title source options can be toggled independently. When disabled, the plugi
 
 ## 👩‍💻 Development
 
+Ensure you have [nvm](https://github.com/nvm-sh/nvm) (or some Node version manager).
+
+Clone the repository and run the following to build the plugin:
+
 ```bash
 nvm use 16
 npm install
@@ -132,7 +130,3 @@ npm test
 ## 📄 License
 
 MIT
-
---------------------------------------------------------------------------------
-
-Made with ❤️ for the Obsidian community
