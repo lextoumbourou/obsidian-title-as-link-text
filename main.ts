@@ -295,6 +295,14 @@ export class LinkUpdater {
   }
 
   private findMostSimilarAlias(text: string, aliases: string[]): string | null {
+    // First, check for exact match (case-insensitive)
+    for (const alias of aliases) {
+      if (alias.toLowerCase() === text.toLowerCase()) {
+        return alias;
+      }
+    }
+
+    // Then check for substring matches
     for (const alias of aliases) {
       if (alias.toLowerCase().includes(text.toLowerCase()) ||
         text.toLowerCase().includes(alias.toLowerCase())) {

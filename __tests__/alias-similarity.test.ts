@@ -207,6 +207,75 @@ describe('LinkUpdater - Alias similarity', () => {
     expect(await vault.read(sourceFile)).toEqual('This is a [Thing](thing.md)');
   });
 
+  it('should not update link text when it exactly matches one of multiple aliases', async () => {
+    // Bug: If a note has aliases ["Jessica", "Jess"] and a link uses "Jess",
+    // the plugin incorrectly updates it to "Jessica" because the substring check
+    // matches "Jessica" first (since "jessica".includes("jess") is true).
+    // The expected behavior is to preserve "Jess" since it's an exact alias match.
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Here is a [[person|Jess]]',
+        'person.md': 'Content about Jessica'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: 'person',
+            original: '[[person|Jess]]',
+          }],
+          frontmatter: undefined,
+          headings: [] as HeadingCache[]
+        } as CachedMetadata,
+        'person.md': {
+          frontmatter: {
+            title: 'Jessica Smith',
+            aliases: ['Jessica', 'Jess']
+          },
+          headings: [] as HeadingCache[],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    // Should NOT update because "Jess" is an exact match for one of the aliases
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('Here is a [[person|Jess]]');
+  });
+
+  it('should not update markdown link text when it exactly matches one of multiple aliases', async () => {
+    // Same bug for markdown-style links
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Here is a [Jess](person.md)',
+        'person.md': 'Content about Jessica'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: 'person.md',
+            original: '[Jess](person.md)',
+          }],
+          frontmatter: undefined,
+          headings: [] as HeadingCache[]
+        } as CachedMetadata,
+        'person.md': {
+          frontmatter: {
+            title: 'Jessica Smith',
+            aliases: ['Jessica', 'Jess']
+          },
+          headings: [] as HeadingCache[],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    // Should NOT update because "Jess" is an exact match for one of the aliases
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('Here is a [Jess](person.md)');
+  });
+
   it('should ignore aliases when useAliases is disabled', async () => {
     const vault = new (jest.requireMock('obsidian').Vault)() as jest.Mocked<Vault>;
     const metadataCache = new (jest.requireMock('obsidian').MetadataCache)() as jest.Mocked<MetadataCache>;
