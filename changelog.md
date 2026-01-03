@@ -2,7 +2,7 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
-## [Unreleased]
+## [1.1.10] - ⚙️ Settings & Bug Fix
 
 - **Use aliases setting**: Added a toggle to enable/disable alias matching. When disabled, the plugin will only use the title for link text and ignore frontmatter aliases.
 - **Bug fix**: Fixed an issue where link text exactly matching one of multiple aliases would be incorrectly updated to a different alias due to substring matching taking precedence over exact matches.
