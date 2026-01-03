@@ -42,6 +42,7 @@ describe('LinkUpdater - Title source settings', () => {
       useFrontmatterTitle: false,
       frontmatterTitleProperty: 'title',
       useFirstHeading: true,
+      useAliases: true,
       autoUpdate: true
     });
 
@@ -91,6 +92,7 @@ describe('LinkUpdater - Title source settings', () => {
       useFrontmatterTitle: true,
       frontmatterTitleProperty: 'title',
       useFirstHeading: false,
+      useAliases: true,
       autoUpdate: true
     });
 
@@ -140,6 +142,7 @@ describe('LinkUpdater - Title source settings', () => {
       useFrontmatterTitle: false,
       frontmatterTitleProperty: 'title',
       useFirstHeading: false,
+      useAliases: true,
       autoUpdate: true
     });
 
@@ -192,6 +195,7 @@ describe('LinkUpdater - Title source settings', () => {
       useFrontmatterTitle: true,
       frontmatterTitleProperty: 'customTitle',
       useFirstHeading: true,
+      useAliases: true,
       autoUpdate: true
     });
 
@@ -243,6 +247,7 @@ describe('LinkUpdater - Title source settings', () => {
       useFrontmatterTitle: true,
       frontmatterTitleProperty: 'customTitle',
       useFirstHeading: true,
+      useAliases: true,
       autoUpdate: true
     });
 

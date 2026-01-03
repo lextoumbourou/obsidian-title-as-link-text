@@ -23,6 +23,7 @@ export interface TitleAsLinkTextSettings {
   useFrontmatterTitle: boolean;
   frontmatterTitleProperty: string;
   useFirstHeading: boolean;
+  useAliases: boolean;
   autoUpdate: boolean;
 }
 
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
   useFrontmatterTitle: true,
   frontmatterTitleProperty: 'title',
   useFirstHeading: true,
+  useAliases: true,
   autoUpdate: true
 };
 
@@ -279,7 +281,7 @@ export class LinkUpdater {
   }
 
   private getAliases(cache: CachedMetadata): string[] {
-    if (!cache.frontmatter || !cache.frontmatter.aliases) {
+    if (!this.settings.useAliases || !cache.frontmatter || !cache.frontmatter.aliases) {
       return [];
     }
 
@@ -493,6 +495,16 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.useFirstHeading)
         .onChange(async (value) => {
           this.plugin.settings.useFirstHeading = value;
+          await this.plugin.saveSettings();
+        }));
+
+    new Setting(containerEl)
+      .setName('Use aliases')
+      .setDesc('Match link text against frontmatter aliases. When disabled, only the title will be used.')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.useAliases)
+        .onChange(async (value) => {
+          this.plugin.settings.useAliases = value;
           await this.plugin.saveSettings();
         }));
 

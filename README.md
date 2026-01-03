@@ -89,6 +89,7 @@ For Markdown-style users:
 - **Title from frontmatter**: Use the title field from frontmatter as the link text (enabled by default)
 - **Frontmatter property**: The frontmatter property to use for getting the title (default: `title`). This allows you to use custom properties like `name`, `heading`, or any other field in your frontmatter.
 - **Title from first heading**: Use the first heading in the note as the link text (enabled by default)
+- **Use aliases**: Match link text against frontmatter aliases (enabled by default). When disabled, only the title will be used for link text, ignoring any aliases defined in frontmatter.
 
 Both title source options can be toggled independently. When disabled, the plugin falls back to the next available source, ultimately defaulting to the filename.
 

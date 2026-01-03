@@ -60,6 +60,7 @@ export const defaultSettings = {
   useFrontmatterTitle: true,
   frontmatterTitleProperty: 'title',
   useFirstHeading: true,
+  useAliases: true,
   autoUpdate: true
 };
 

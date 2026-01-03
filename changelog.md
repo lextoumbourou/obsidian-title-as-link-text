@@ -2,6 +2,10 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
+## [Unreleased]
+
+- **Use aliases setting**: Added a toggle to enable/disable alias matching. When disabled, the plugin will only use the title for link text and ignore frontmatter aliases.
+
 ## [1.1.9] - ⚙️  Enhanced Settings
 
 - **Configurable Frontmatter Property**: You can now specify which frontmatter property to use for getting the title (defaults to `title`). This allows you to use custom properties like `name`, `heading`, or any other field in your frontmatter.

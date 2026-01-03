@@ -1,5 +1,6 @@
-import { CachedMetadata, HeadingCache } from 'obsidian';
-import { setupTest } from './test-utils';
+import { CachedMetadata, HeadingCache, Vault, MetadataCache } from 'obsidian';
+import { setupTest, createSourceFile } from './test-utils';
+import { LinkUpdater } from '../main';
 
 describe('LinkUpdater - Alias similarity', () => {
   it('should update link text if it matches a similar alias', async () => {
@@ -204,6 +205,60 @@ describe('LinkUpdater - Alias similarity', () => {
     const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
     expect(updatedCount).toEqual(1);
     expect(await vault.read(sourceFile)).toEqual('This is a [Thing](thing.md)');
+  });
+
+  it('should ignore aliases when useAliases is disabled', async () => {
+    const vault = new (jest.requireMock('obsidian').Vault)() as jest.Mocked<Vault>;
+    const metadataCache = new (jest.requireMock('obsidian').MetadataCache)() as jest.Mocked<MetadataCache>;
+
+    const files: Record<string, string> = {
+      'note1.md': 'Here is a [Project](note2.md)',
+      'note2.md': 'Content of note 2'
+    };
+
+    vault.read.mockImplementation((file) => Promise.resolve(files[file.path] || ''));
+    vault.modify.mockImplementation((file, content) => {
+      files[file.path] = content;
+      return Promise.resolve();
+    });
+
+    const metadata: Record<string, CachedMetadata> = {
+      'note1.md': {
+        links: [{ link: 'note2.md', original: '[Project](note2.md)' }],
+        frontmatter: undefined
+      } as CachedMetadata,
+      'note2.md': {
+        frontmatter: {
+          title: 'Note Title',
+          aliases: ['My Project Name']  // Would normally match "Project"
+        },
+        headings: [{ heading: 'Heading' }] as HeadingCache[],
+        links: []
+      } as CachedMetadata
+    };
+
+    metadataCache.getFileCache.mockImplementation((file) => metadata[file.path] || null);
+    metadataCache.getFirstLinkpathDest.mockImplementation((linkpath) => {
+      if (metadata[linkpath]) return createSourceFile(linkpath);
+      return null;
+    });
+
+    const linkUpdater = new LinkUpdater(vault, metadataCache, {
+      debounceDelay: 1000,
+      similarityThreshold: 0.65,
+      useFrontmatterTitle: true,
+      frontmatterTitleProperty: 'title',
+      useFirstHeading: true,
+      useAliases: false,
+      autoUpdate: true
+    });
+
+    const sourceFile = createSourceFile('note1.md');
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+
+    // Should use title instead of matching alias
+    expect(updatedCount).toBe(1);
+    expect(files['note1.md']).toBe('Here is a [Note Title](note2.md)');
   });
 
 }); 
