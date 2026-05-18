@@ -58,6 +58,30 @@ describe('LinkUpdater - Markdown links', () => {
     expect(await vault.read(sourceFile)).toBe('Here is a [Heading Title](note2.md)');
   });
 
+  it('should not overwrite link text with alias when it matches the title exactly', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Here is a [Dog](dog.md)',
+        'dog.md': 'Content about dogs'
+      },
+      {
+        'note1.md': {
+          links: [{ link: 'dog.md', original: '[Dog](dog.md)' }],
+          frontmatter: undefined
+        } as CachedMetadata,
+        'dog.md': {
+          frontmatter: { title: 'Dog', aliases: ['Dogs'] },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('Here is a [Dog](dog.md)');
+  });
+
   it('should not update link text if it matches an alias', async () => {
     const { linkUpdater, sourceFile, vault } = setupTest(
       {

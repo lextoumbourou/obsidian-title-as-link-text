@@ -277,6 +277,30 @@ describe('LinkUpdater - Wiki links', () => {
     expect(await vault.read(sourceFile)).toBe('Here is a [[dogs]]');
   });
 
+  it('should not strip display text from wikilink when linked file has no explicit title', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Here is a [[dogs|My Custom Text]]',
+        'dogs.md': 'Content about dogs'
+      },
+      {
+        'note1.md': {
+          links: [{ link: 'dogs', original: '[[dogs|My Custom Text]]' }],
+          frontmatter: undefined
+        } as CachedMetadata,
+        'dogs.md': {
+          frontmatter: undefined,
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('Here is a [[dogs|My Custom Text]]');
+  });
+
   it('should not update link text to alias when it matches the title exactly', async () => {
     const { linkUpdater, sourceFile, vault } = setupTest(
       {

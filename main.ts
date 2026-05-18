@@ -180,7 +180,7 @@ export class LinkUpdater {
                 updatedCount++;
                 return `[[${linkPath}|${similarAlias}]]`;
               }
-              if (!similarAlias && linkText !== title) {
+              if (!similarAlias && linkText !== title && this.hasExplicitTitle(linkedCache)) {
                 updatedCount++;
                 return linkPath !== title ? `[[${linkPath}|${title}]]` : `[[${linkPath}]]`;
               }
@@ -278,6 +278,14 @@ export class LinkUpdater {
       this.settings.useFirstHeading && cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
     const title = frontMatterTitle || firstHeading || basename(filePath).replace('.md', '');
     return this.stripLinkElements(title);
+  }
+
+  private hasExplicitTitle(cache: CachedMetadata): boolean {
+    const frontMatterTitle =
+      this.settings.useFrontmatterTitle && cache.frontmatter && cache.frontmatter[this.settings.frontmatterTitleProperty];
+    const firstHeading =
+      this.settings.useFirstHeading && cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
+    return !!(frontMatterTitle || firstHeading);
   }
 
   private getAliases(cache: CachedMetadata): string[] {
