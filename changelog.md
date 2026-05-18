@@ -2,7 +2,7 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
-## [Unreleased]
+## [1.1.11] - 🐛 Bug Fixes
 
 - **Bug fix**: Fixed an issue where an unclosed `[[` before a markdown link would cause the link text and preceding content to be corrupted.
 - **Bug fix**: Fixed an issue where wikilinks with custom display text would have that text stripped when the linked note has no frontmatter title or headings.
