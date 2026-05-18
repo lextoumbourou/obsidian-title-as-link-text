@@ -29,6 +29,32 @@ describe('LinkUpdater - Edge cases', () => {
     expect(await vault.read(sourceFile)).toBe('[[  \n\n[Doggos](dogs.md)');
   });
 
+  it('should not corrupt content when unclosed [[ precedes a markdown link', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': '[[dogs are better than [cats](cats.md)',
+        'cats.md': 'Content about cats'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: 'cats.md',
+            original: '[cats](cats.md)',
+          }] as LinkCache[],
+          frontmatter: undefined
+        } as CachedMetadata,
+        'cats.md': {
+          frontmatter: { title: 'Cats' },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    await linkUpdater.updateLinksInNote(sourceFile);
+    expect(await vault.read(sourceFile)).toBe('[[dogs are better than [Cats](cats.md)');
+  });
+
   it('should strip links in headers', async () => {
     const { linkUpdater, sourceFile, vault } = setupTest(
       {

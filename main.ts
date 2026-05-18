@@ -84,7 +84,7 @@ export class LinkUpdater {
     //                         + = one or more (greedy)
     // \)                     - Match closing parenthesis
     // g                      - Global flag: match all occurrences
-    const markdownLinkRegex = /\[([^\]\n]+)\]\(([^)\n]+)\)/g;
+    const markdownLinkRegex = /\[([^\][\n]+)\]\(([^)\n]+)\)/g;
 
     let newFileContent = fileContent.replace(
       markdownLinkRegex,
