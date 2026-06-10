@@ -46,3 +46,8 @@ Do NOT create GitHub releases manually — pushing a tag does everything:
 5. `.github/workflows/release.yml` builds and publishes the release with
    `main.js`, `manifest.json`, and the plugin zip. If a release for the tag
    already exists it just replaces the assets.
+
+Gotchas: the workflow file used is the one at the tagged commit, so tag the
+commit that contains any workflow changes. Deleting a tag silently reverts
+its published release to a draft — republish with
+`gh release edit <tag> --draft=false`.
