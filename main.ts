@@ -51,16 +51,14 @@ export class LinkUpdater {
   async updateAllLinks() {
     const markdownFiles = this.vault.getMarkdownFiles();
 
-    let updatedBacklinksCount = 0;
+    // Updating each note's own links once covers every link in the vault;
+    // no need for the per-file backlink scan, which made this O(N²).
+    let updatedLinksCount = 0;
     for (const file of markdownFiles) {
-      const oldPath = file.path;
-      const backLinks = await this.updateBackLinks(file, oldPath, false);
-      if (backLinks) {
-        updatedBacklinksCount = backLinks + updatedBacklinksCount;
-      }
+      updatedLinksCount += await this.updateLinksInNote(file);
     }
 
-    return updatedBacklinksCount;
+    return updatedLinksCount;
   }
 
   async updateLinksInNote(file: TFile): Promise<number> {

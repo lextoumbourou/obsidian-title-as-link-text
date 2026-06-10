@@ -4,6 +4,7 @@ All notable changes to the Title As Link Text plugin will be documented in this 
 
 ## [Unreleased] - 🐛 Bug Fixes
 
+- **Performance**: The "Update all links" command now processes each note once instead of rescanning the whole vault per note, making it dramatically faster on large vaults.
 - **Bug fix**: Links inside fenced code blocks (``` or `~~~`) and inline code spans are no longer rewritten.
 - **Bug fix**: Fixed a crash when a link URL contains a literal `%` (e.g. `[deals](100%-deals.md)`), which previously aborted all link updates in the note.
 - **Bug fix**: Fixed a crash when a frontmatter title or alias is a non-string YAML value (e.g. `title: 2024` or `aliases: [2024]`).
