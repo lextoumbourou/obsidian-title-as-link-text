@@ -4,6 +4,7 @@ All notable changes to the Title As Link Text plugin will be documented in this 
 
 ## [Unreleased] - 🐛 Bug Fixes
 
+- **Bug fix**: Links inside fenced code blocks (``` or `~~~`) and inline code spans are no longer rewritten.
 - **Bug fix**: Fixed a crash when a link URL contains a literal `%` (e.g. `[deals](100%-deals.md)`), which previously aborted all link updates in the note.
 - **Bug fix**: Fixed a crash when a frontmatter title or alias is a non-string YAML value (e.g. `title: 2024` or `aliases: [2024]`).
 - **Bug fix**: Markdown links with custom display text are now preserved when the linked note has no frontmatter title or headings, matching the existing wikilink behavior. Previously the custom text was replaced with the filename.

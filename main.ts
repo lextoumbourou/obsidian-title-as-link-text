@@ -86,9 +86,16 @@ export class LinkUpdater {
     // g                      - Global flag: match all occurrences
     const markdownLinkRegex = /\[([^\][\n]+)\]\(([^)\n]+)\)/g;
 
+    const markdownCodeRanges = this.getCodeRanges(fileContent);
+
     let newFileContent = fileContent.replace(
       markdownLinkRegex,
-      (match, linkText, linkUrl) => {
+      (match, linkText, linkUrl, offset) => {
+        // Skip links inside fenced code blocks or inline code.
+        if (this.isInCode(offset, markdownCodeRanges)) {
+          return match;
+        }
+
         // Skip if this is a checkbox pattern.
         if (match.startsWith('[ ]') || match.startsWith('[x]')) {
           return match;
@@ -160,9 +167,17 @@ export class LinkUpdater {
     // \]\]              - Match literal closing double brackets
     const wikilinkRegex = /\[\[([^\][\n]+?)(?:#([^\][\n]+?))?(?:\|([^\][\n]+?))?]]/g;
 
+    // Recompute on newFileContent: the markdown pass may have shifted offsets.
+    const wikilinkCodeRanges = this.getCodeRanges(newFileContent);
+
     newFileContent = newFileContent.replace(
       wikilinkRegex,
-      (match, linkPath, subheading, linkText) => {
+      (match, linkPath, subheading, linkText, offset) => {
+        // Skip links inside fenced code blocks or inline code.
+        if (this.isInCode(offset, wikilinkCodeRanges)) {
+          return match;
+        }
+
         // Skip links with subheadings/anchors (e.g., [[Page#Header]], [[Page#^quote]])
         if (subheading) {
           return match;
@@ -371,6 +386,50 @@ export class LinkUpdater {
     const distance = matrix[str1.length][str2.length];
     const maxLength = Math.max(str1.length, str2.length);
     return 1 - (distance / maxLength);
+  }
+
+  // Returns [start, end) offsets of fenced code blocks and inline code spans
+  // so link rewriting can skip them.
+  private getCodeRanges(content: string): Array<[number, number]> {
+    const ranges: Array<[number, number]> = [];
+
+    // Fenced code blocks (``` or ~~~). A fence closes only on a matching
+    // character with at least the opening fence's length; an unclosed fence
+    // protects through to the end of the file.
+    let fence: { char: string; length: number; start: number } | null = null;
+    let offset = 0;
+    for (const line of content.split('\n')) {
+      const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})/);
+      if (fenceMatch) {
+        const char = fenceMatch[1][0];
+        const length = fenceMatch[1].length;
+        if (!fence) {
+          fence = { char, length, start: offset };
+        } else if (char === fence.char && length >= fence.length) {
+          ranges.push([fence.start, offset + line.length]);
+          fence = null;
+        }
+      }
+      offset += line.length + 1;
+    }
+    if (fence) {
+      ranges.push([fence.start, content.length]);
+    }
+
+    // Inline code spans: a run of backticks closed by a run of at least the
+    // same length on the same line. Spans inside fences are already covered;
+    // the extra overlapping ranges are harmless.
+    const inlineCodeRegex = /(`+)[^`\n]+?\1/g;
+    let inlineMatch: RegExpExecArray | null;
+    while ((inlineMatch = inlineCodeRegex.exec(content)) !== null) {
+      ranges.push([inlineMatch.index, inlineMatch.index + inlineMatch[0].length]);
+    }
+
+    return ranges;
+  }
+
+  private isInCode(offset: number, codeRanges: Array<[number, number]>): boolean {
+    return codeRanges.some(([start, end]) => offset >= start && offset < end);
   }
 
   private stripLinkElements(text: string): string {
