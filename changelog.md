@@ -2,7 +2,7 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
-## [Unreleased] - 🐛 Bug Fixes
+## [1.1.12] - 🐛 Bug Fixes & Performance
 
 - **Bug fix**: Note updates are now written atomically via `Vault.process`, so edits made while an update is in flight are no longer overwritten.
 - **Bug fix**: Auto-update now debounces per file, so changes to multiple files within the debounce window are all processed. Previously only the most recently changed file was updated.
