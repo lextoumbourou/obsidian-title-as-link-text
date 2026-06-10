@@ -2,6 +2,14 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
+## [Unreleased] - 🐛 Bug Fixes
+
+- **Bug fix**: Fixed a crash when a link URL contains a literal `%` (e.g. `[deals](100%-deals.md)`), which previously aborted all link updates in the note.
+- **Bug fix**: Fixed a crash when a frontmatter title or alias is a non-string YAML value (e.g. `title: 2024` or `aliases: [2024]`).
+- **Bug fix**: Markdown links with custom display text are now preserved when the linked note has no frontmatter title or headings, matching the existing wikilink behavior. Previously the custom text was replaced with the filename.
+- **Bug fix**: Fixed the "Reset to defaults" button so that reset (and subsequent) settings changes take effect immediately instead of requiring a plugin reload.
+- **Bug fix**: Filenames containing `.md` mid-name (e.g. `intro.md-notes.md`) no longer have the wrong part stripped when deriving the title.
+
 ## [1.1.11] - 🐛 Bug Fixes
 
 - **Bug fix**: Fixed an issue where an unclosed `[[` before a markdown link would cause the link text and preceding content to be corrupted.

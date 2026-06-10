@@ -100,4 +100,112 @@ describe('LinkUpdater - Edge cases', () => {
     expect(updatedCount).toBe(1);
     expect(await vault.read(sourceFile)).toBe('[Summary of Doggos and Doggos](summary.md)');
   });
+
+  it('should not crash on a literal percent sign in a link URL', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Check [discount](100%-deals.md)',
+        '100%-deals.md': '# Deals'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: '100%-deals.md',
+            original: '[discount](100%-deals.md)',
+          }] as LinkCache[],
+          frontmatter: undefined
+        } as CachedMetadata,
+        '100%-deals.md': {
+          frontmatter: undefined,
+          headings: [{ heading: 'Deals' }] as HeadingCache[],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe('Check [Deals](100%-deals.md)');
+  });
+
+  it('should preserve custom markdown link text when linked note has no explicit title', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'See [my custom description](other.md)',
+        'other.md': 'no heading, no frontmatter'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: 'other.md',
+            original: '[my custom description](other.md)',
+          }] as LinkCache[],
+          frontmatter: undefined
+        } as CachedMetadata,
+        'other.md': {
+          frontmatter: undefined,
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe('See [my custom description](other.md)');
+  });
+
+  it('should coerce a non-string frontmatter title to a string', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': '[text](other.md)',
+        'other.md': 'content'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: 'other.md',
+            original: '[text](other.md)',
+          }] as LinkCache[],
+          frontmatter: undefined
+        } as CachedMetadata,
+        'other.md': {
+          frontmatter: { title: 2024 as unknown as string },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe('[2024](other.md)');
+  });
+
+  it('should not crash on non-string or null alias values', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': '[2025](other.md)',
+        'other.md': 'content'
+      },
+      {
+        'note1.md': {
+          links: [{
+            link: 'other.md',
+            original: '[2025](other.md)',
+          }] as LinkCache[],
+          frontmatter: undefined
+        } as CachedMetadata,
+        'other.md': {
+          frontmatter: { title: 'Other Note', aliases: [2024, null] as unknown as string[] },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe('[2024](other.md)');
+  });
 }); 

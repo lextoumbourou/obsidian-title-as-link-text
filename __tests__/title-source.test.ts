@@ -99,11 +99,13 @@ describe('LinkUpdater - Title source settings', () => {
     const sourceFile = createSourceFile('note1.md');
     const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
 
-    expect(updatedCount).toBe(1);
-    expect(files['note1.md']).toBe('Here is a [note2](note2.md)');
+    // With the heading ignored there is no explicit title, so the custom
+    // link text is preserved rather than replaced with the filename.
+    expect(updatedCount).toBe(0);
+    expect(files['note1.md']).toBe('Here is a [link](note2.md)');
   });
 
-  it('should use filename when both title sources are disabled', async () => {
+  it('should preserve link text when both title sources are disabled', async () => {
     const vault = new (jest.requireMock('obsidian').Vault)() as jest.Mocked<Vault>;
     const metadataCache = new (jest.requireMock('obsidian').MetadataCache)() as jest.Mocked<MetadataCache>;
 
@@ -149,8 +151,10 @@ describe('LinkUpdater - Title source settings', () => {
     const sourceFile = createSourceFile('note1.md');
     const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
 
-    expect(updatedCount).toBe(1);
-    expect(files['note1.md']).toBe('Here is a [note2](note2.md)');
+    // With both sources disabled there is no explicit title, so the custom
+    // link text is preserved rather than replaced with the filename.
+    expect(updatedCount).toBe(0);
+    expect(files['note1.md']).toBe('Here is a [link](note2.md)');
   });
 
   it('should use custom frontmatter property for title', async () => {

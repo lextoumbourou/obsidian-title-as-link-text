@@ -94,7 +94,14 @@ export class LinkUpdater {
           return match;
         }
 
-        const linkUrlDecoded = decodeURIComponent(linkUrl);
+        // A literal % in the URL (e.g. "100%-deals.md") makes decodeURIComponent
+        // throw; treat the URL as already-decoded in that case.
+        let linkUrlDecoded: string;
+        try {
+          linkUrlDecoded = decodeURIComponent(linkUrl);
+        } catch {
+          linkUrlDecoded = linkUrl;
+        }
         // Remove any #subheading from the link before looking up the file
         const baseLinkUrl = linkUrlDecoded.split('#')[0];
 
@@ -127,13 +134,12 @@ export class LinkUpdater {
               updatedCount++;
               return `[${similarAlias}](${linkUrl})`;
             }
-            // Only use title if no similar alias exists
-            if (!similarAlias) {
-              const title = this.getPageTitle(linkedCache, linkedFile.path);
-              if (linkText !== title) {
-                updatedCount++;
-                return `[${title}](${linkUrl})`;
-              }
+            // Only use title if no similar alias exists. Preserve custom link
+            // text when the note has no explicit title (the title would just
+            // be the filename).
+            if (!similarAlias && linkText !== title && this.hasExplicitTitle(linkedCache)) {
+              updatedCount++;
+              return `[${title}](${linkUrl})`;
             }
           }
         }
@@ -186,7 +192,7 @@ export class LinkUpdater {
               }
             } else {
               // Handle links without display text
-              const baseLinkName = linkPath.split('/').pop()?.replace('.md', '') || '';
+              const baseLinkName = linkPath.split('/').pop()?.replace(/\.md$/, '') || '';
               if (title && title !== baseLinkName) {
                 updatedCount++;
                 return linkPath !== title ? `[[${linkPath}|${title}]]` : `[[${linkPath}]]`;
@@ -262,6 +268,7 @@ export class LinkUpdater {
             );
             if (firstLinkPath && firstLinkPath.path == filePath) {
               notesWithBacklinks.push(note);
+              break;
             }
           }
         }
@@ -276,8 +283,9 @@ export class LinkUpdater {
       this.settings.useFrontmatterTitle && cache.frontmatter && cache.frontmatter[this.settings.frontmatterTitleProperty];
     const firstHeading =
       this.settings.useFirstHeading && cache.headings && cache.headings.length > 0 && cache.headings[0].heading;
-    const title = frontMatterTitle || firstHeading || basename(filePath).replace('.md', '');
-    return this.stripLinkElements(title);
+    // YAML can parse a title as a non-string (e.g. `title: 2024`), so coerce.
+    const title = frontMatterTitle || firstHeading || basename(filePath).replace(/\.md$/, '');
+    return this.stripLinkElements(String(title));
   }
 
   private hasExplicitTitle(cache: CachedMetadata): boolean {
@@ -293,9 +301,11 @@ export class LinkUpdater {
       return [];
     }
 
+    // Aliases may contain non-string YAML values (numbers, nulls); drop nulls
+    // and coerce the rest so similarity matching doesn't throw.
     const aliases = cache.frontmatter.aliases;
     if (Array.isArray(aliases)) {
-      return aliases;
+      return aliases.filter((alias) => alias != null).map(String);
     } else if (typeof aliases === 'string') {
       return [aliases];
     }
@@ -563,7 +573,9 @@ class TitleAsLinkTextSettingTab extends PluginSettingTab {
         .setButtonText('Reset')
         .setWarning()
         .onClick(async () => {
-          this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS) as TitleAsLinkTextSettings;
+          // Mutate in place: LinkUpdater holds a reference to this object, so
+          // replacing it would disconnect settings from the updater.
+          Object.assign(this.plugin.settings, DEFAULT_SETTINGS);
           await this.plugin.saveSettings();
           this.display();
         }));
