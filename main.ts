@@ -63,12 +63,36 @@ export class LinkUpdater {
   }
 
   async updateLinksInNote(file: TFile): Promise<number> {
-    const fileContent = await this.vault.read(file);
     const fileCache = this.metadataCache.getFileCache(file);
     if (!fileCache) {
       return 0;
     }
 
+    // Cheap pre-check on a plain read so unchanged notes are never written:
+    // writing identical content still triggers the metadata 'changed' event
+    // and would cause a rewrite loop.
+    const fileContent = await this.vault.read(file);
+    if (this.applyLinkUpdates(fileContent, file.path).content === fileContent) {
+      return 0;
+    }
+
+    // Recompute inside vault.process so the written content derives from the
+    // content at write time; read-then-modify would clobber edits made while
+    // the update is in flight.
+    let updatedCount = 0;
+    await this.vault.process(file, (currentContent) => {
+      const result = this.applyLinkUpdates(currentContent, file.path);
+      updatedCount = result.count;
+      return result.content;
+    });
+
+    return updatedCount;
+  }
+
+  private applyLinkUpdates(
+    fileContent: string,
+    sourcePath: string
+  ): { content: string; count: number } {
     let updatedCount = 0;
 
     // Markdown link regex breakdown:
@@ -116,7 +140,7 @@ export class LinkUpdater {
           return match;
         }
 
-        const linkedFile = this.metadataCache.getFirstLinkpathDest(baseLinkUrl, file.path);
+        const linkedFile = this.metadataCache.getFirstLinkpathDest(baseLinkUrl, sourcePath);
         if (linkedFile && linkedFile.name.endsWith('.md')) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
@@ -182,7 +206,7 @@ export class LinkUpdater {
           return match;
         }
 
-        const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, file.path);
+        const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
         if (linkedFile) {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
@@ -218,10 +242,7 @@ export class LinkUpdater {
       }
     );
 
-    if (fileContent !== newFileContent) {
-      await this.vault.modify(file, newFileContent);
-    }
-    return updatedCount;
+    return { content: newFileContent, count: updatedCount };
   }
 
   async updateBackLinks(file: TFile, oldPath: string, notify: boolean) {

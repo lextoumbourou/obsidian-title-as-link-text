@@ -44,6 +44,7 @@ jest.mock('obsidian', () => ({
     getMarkdownFiles: jest.fn(),
     read: jest.fn(),
     modify: jest.fn(),
+    process: jest.fn(),
     on: jest.fn(),
   })),
   MetadataCache: jest.fn().mockImplementation(() => ({
@@ -100,6 +101,12 @@ export const setupTest = (
   vault.modify.mockImplementation((file: TFile, content: string) => {
     files[file.path] = content;
     return Promise.resolve();
+  });
+
+  // Atomic read-modify-write: the callback always sees the current content.
+  vault.process.mockImplementation((file: TFile, fn: (data: string) => string) => {
+    files[file.path] = fn(files[file.path] || '');
+    return Promise.resolve(files[file.path]);
   });
 
   metadataCache.getFileCache.mockImplementation((file: TFile) => {

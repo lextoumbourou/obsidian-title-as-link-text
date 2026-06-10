@@ -25,7 +25,9 @@ const createPlugin = () => {
       }),
     },
     metadataCache: {
-      getFileCache: jest.fn().mockReturnValue(null),
+      // A non-null cache so updateLinksInNote proceeds to vault.read, which
+      // the tests use to observe which files were processed.
+      getFileCache: jest.fn().mockReturnValue({}),
       getCache: jest.fn().mockReturnValue(null),
       getFirstLinkpathDest: jest.fn().mockReturnValue(null),
       on: jest.fn((name: string, handler: EventHandler) => {

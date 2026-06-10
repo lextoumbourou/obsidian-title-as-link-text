@@ -290,6 +290,10 @@ describe('LinkUpdater - Alias similarity', () => {
       files[file.path] = content;
       return Promise.resolve();
     });
+    vault.process.mockImplementation((file, fn) => {
+      files[file.path] = fn(files[file.path] || '');
+      return Promise.resolve(files[file.path]);
+    });
 
     const metadata: Record<string, CachedMetadata> = {
       'note1.md': {

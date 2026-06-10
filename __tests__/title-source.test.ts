@@ -17,6 +17,10 @@ describe('LinkUpdater - Title source settings', () => {
       files[file.path] = content;
       return Promise.resolve();
     });
+    vault.process.mockImplementation((file, fn) => {
+      files[file.path] = fn(files[file.path] || '');
+      return Promise.resolve(files[file.path]);
+    });
 
     const metadata: Record<string, CachedMetadata> = {
       'note1.md': {
@@ -66,6 +70,10 @@ describe('LinkUpdater - Title source settings', () => {
     vault.modify.mockImplementation((file, content) => {
       files[file.path] = content;
       return Promise.resolve();
+    });
+    vault.process.mockImplementation((file, fn) => {
+      files[file.path] = fn(files[file.path] || '');
+      return Promise.resolve(files[file.path]);
     });
 
     const metadata: Record<string, CachedMetadata> = {
@@ -119,6 +127,10 @@ describe('LinkUpdater - Title source settings', () => {
       files[file.path] = content;
       return Promise.resolve();
     });
+    vault.process.mockImplementation((file, fn) => {
+      files[file.path] = fn(files[file.path] || '');
+      return Promise.resolve(files[file.path]);
+    });
 
     const metadata: Record<string, CachedMetadata> = {
       'note1.md': {
@@ -170,6 +182,10 @@ describe('LinkUpdater - Title source settings', () => {
     vault.modify.mockImplementation((file, content) => {
       files[file.path] = content;
       return Promise.resolve();
+    });
+    vault.process.mockImplementation((file, fn) => {
+      files[file.path] = fn(files[file.path] || '');
+      return Promise.resolve(files[file.path]);
     });
 
     const metadata: Record<string, CachedMetadata> = {
@@ -223,6 +239,10 @@ describe('LinkUpdater - Title source settings', () => {
     vault.modify.mockImplementation((file, content) => {
       files[file.path] = content;
       return Promise.resolve();
+    });
+    vault.process.mockImplementation((file, fn) => {
+      files[file.path] = fn(files[file.path] || '');
+      return Promise.resolve(files[file.path]);
     });
 
     const metadata: Record<string, CachedMetadata> = {
