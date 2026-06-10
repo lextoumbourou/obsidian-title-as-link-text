@@ -4,6 +4,7 @@ import {
   TFile,
   Notice,
   debounce,
+  Debouncer,
   TAbstractFile,
   App,
   PluginSettingTab,
@@ -446,7 +447,9 @@ export class LinkUpdater {
 export default class TitleAsLinkTextPlugin extends Plugin {
   settings: TitleAsLinkTextSettings;
   private linkUpdater: LinkUpdater;
-  private debouncedUpdateBackLinks: (file: TFile, oldPath: string, notify: boolean) => void;
+  // One debouncer per file path: a single shared debouncer would drop the
+  // update for file A when file B changes inside the debounce window.
+  private debouncedUpdaters = new Map<string, Debouncer<[TFile, string, boolean], void>>();
 
   async onload() {
     await this.loadSettings();
@@ -457,16 +460,10 @@ export default class TitleAsLinkTextPlugin extends Plugin {
       this.settings
     );
 
-    this.debouncedUpdateBackLinks = debounce(
-      this.linkUpdater.updateBackLinks.bind(this.linkUpdater),
-      this.settings.debounceDelay,
-      true
-    );
-
     this.registerEvent(
       this.app.vault.on('rename', async (file: TAbstractFile, oldPath: string) => {
         if (this.settings.autoUpdate && file instanceof TFile) {
-          this.debouncedUpdateBackLinks(file, oldPath, true);
+          this.queueUpdate(file, oldPath, true);
         }
       })
     );
@@ -474,7 +471,7 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     this.registerEvent(
       this.app.metadataCache.on('changed', async (file: TFile) => {
         if (this.settings.autoUpdate) {
-          this.debouncedUpdateBackLinks(file, file.path, true);
+          this.queueUpdate(file, file.path, true);
         }
       })
     );
@@ -507,18 +504,37 @@ export default class TitleAsLinkTextPlugin extends Plugin {
     this.addSettingTab(new TitleAsLinkTextSettingTab(this.app, this));
   }
 
+  onunload() {
+    for (const debounced of this.debouncedUpdaters.values()) {
+      debounced.cancel();
+    }
+    this.debouncedUpdaters.clear();
+  }
+
+  private queueUpdate(file: TFile, oldPath: string, notify: boolean) {
+    let debounced = this.debouncedUpdaters.get(file.path);
+    if (!debounced) {
+      debounced = debounce(
+        (f: TFile, op: string, n: boolean) => {
+          void this.linkUpdater.updateBackLinks(f, op, n);
+        },
+        this.settings.debounceDelay,
+        true
+      );
+      this.debouncedUpdaters.set(file.path, debounced);
+    }
+    debounced(file, oldPath, notify);
+  }
+
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
   }
 
   async saveSettings() {
     await this.saveData(this.settings);
-    // Recreate debounced function with new delay
-    this.debouncedUpdateBackLinks = debounce(
-      this.linkUpdater.updateBackLinks.bind(this.linkUpdater),
-      this.settings.debounceDelay,
-      true
-    );
+    // Drop cached debouncers so new ones pick up a changed debounce delay.
+    // Pending timers still fire with the old delay; no updates are lost.
+    this.debouncedUpdaters.clear();
   }
 }
 

@@ -4,6 +4,7 @@ All notable changes to the Title As Link Text plugin will be documented in this 
 
 ## [Unreleased] - 🐛 Bug Fixes
 
+- **Bug fix**: Auto-update now debounces per file, so changes to multiple files within the debounce window are all processed. Previously only the most recently changed file was updated.
 - **Performance**: The "Update all links" command now processes each note once instead of rescanning the whole vault per note, making it dramatically faster on large vaults.
 - **Bug fix**: Links inside fenced code blocks (``` or `~~~`) and inline code spans are no longer rewritten.
 - **Bug fix**: Fixed a crash when a link URL contains a literal `%` (e.g. `[deals](100%-deals.md)`), which previously aborted all link updates in the note.
