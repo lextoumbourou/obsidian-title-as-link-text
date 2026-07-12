@@ -330,4 +330,52 @@ describe('LinkUpdater - Wiki links', () => {
     expect(updatedCount).toBe(0);
     expect(await vault.read(sourceFile)).toBe('Here is a [[dogs|Dogs]]');
   });
-}); 
+
+  it('should escape wikilink delimiters in title-derived display text', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Here is [[note2]]',
+        'note2.md': 'Content'
+      },
+      {
+        'note1.md': { links: [], frontmatter: undefined } as CachedMetadata,
+        'note2.md': {
+          frontmatter: { title: 'API ]] legacy | guide & notes' },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe(
+      'Here is [[note2|API &#93;&#93; legacy &#124; guide &amp; notes]]'
+    );
+  });
+
+  it('should preserve an escaped alias-derived wikilink on subsequent updates', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': 'Here is [[note2|API legacy]]',
+        'note2.md': 'Content'
+      },
+      {
+        'note1.md': { links: [], frontmatter: undefined } as CachedMetadata,
+        'note2.md': {
+          frontmatter: { title: 'Other', aliases: ['API ]] legacy'] },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    await linkUpdater.updateLinksInNote(sourceFile);
+    const escapedContent = 'Here is [[note2|API &#93;&#93; legacy]]';
+    expect(await vault.read(sourceFile)).toBe(escapedContent);
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe(escapedContent);
+  });
+});

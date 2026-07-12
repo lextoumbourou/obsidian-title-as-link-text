@@ -97,9 +97,8 @@ export class LinkUpdater {
 
     // Markdown link regex breakdown:
     // \[                     - Match opening square bracket
-    // ([^\]\n]+)            - Group 1: Match link text
-    //                         [^\]\n] = any char except ] or newline
-    //                         + = one or more (greedy)
+    // ((?:\\[^\n]|[^\]\\[\n])+) - Group 1: Match link text, including
+    //                                backslash-escaped delimiters
     // \]                     - Match closing square bracket
     // \(                     - Match opening parenthesis
     // ([^)\n]+)             - Group 2: Match URL/path
@@ -107,15 +106,15 @@ export class LinkUpdater {
     //                         + = one or more (greedy)
     // \)                     - Match closing parenthesis
     // g                      - Global flag: match all occurrences
-    const markdownLinkRegex = /\[([^\][\n]+)\]\(([^)\n]+)\)/g;
+    const markdownLinkRegex = /\[((?:\\[^\n]|[^\]\\[\n])+)\]\(([^)\n]+)\)/g;
 
-    const markdownCodeRanges = this.getCodeRanges(fileContent);
+    const markdownProtectedRanges = this.getProtectedRanges(fileContent);
 
     let newFileContent = fileContent.replace(
       markdownLinkRegex,
       (match, linkText, linkUrl, offset) => {
-        // Skip links inside fenced code blocks or inline code.
-        if (this.isInCode(offset, markdownCodeRanges)) {
+        // Skip links inside protected code regions.
+        if (this.isProtected(offset, markdownProtectedRanges)) {
           return match;
         }
 
@@ -145,31 +144,32 @@ export class LinkUpdater {
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const title = this.getPageTitle(linkedCache, linkedFile.path);
+            const comparableLinkText = this.unescapeMarkdownLinkText(linkText);
 
             // If the current link text matches the title exactly, don't try to find an alias
-            if (linkText === title) {
+            if (comparableLinkText === title) {
               return match;
             }
 
             // If it matches on case-insensitive, use the title
-            if (linkText.toLowerCase() === title.toLowerCase()) {
+            if (comparableLinkText.toLowerCase() === title.toLowerCase()) {
               updatedCount++;
-              return `[${title}](${linkUrl})`;
+              return `[${this.escapeMarkdownLinkText(title)}](${linkUrl})`;
             }
 
             const aliases = this.getAliases(linkedCache);
             // Find the most similar alias if one exists
-            const similarAlias = this.findMostSimilarAlias(linkText, aliases);
-            if (similarAlias && similarAlias !== linkText) {
+            const similarAlias = this.findMostSimilarAlias(comparableLinkText, aliases);
+            if (similarAlias && similarAlias !== comparableLinkText) {
               updatedCount++;
-              return `[${similarAlias}](${linkUrl})`;
+              return `[${this.escapeMarkdownLinkText(similarAlias)}](${linkUrl})`;
             }
             // Only use title if no similar alias exists. Preserve custom link
             // text when the note has no explicit title (the title would just
             // be the filename).
-            if (!similarAlias && linkText !== title && this.hasExplicitTitle(linkedCache)) {
+            if (!similarAlias && comparableLinkText !== title && this.hasExplicitTitle(linkedCache)) {
               updatedCount++;
-              return `[${title}](${linkUrl})`;
+              return `[${this.escapeMarkdownLinkText(title)}](${linkUrl})`;
             }
           }
         }
@@ -191,13 +191,13 @@ export class LinkUpdater {
     const wikilinkRegex = /\[\[([^\][\n]+?)(?:#([^\][\n]+?))?(?:\|([^\][\n]+?))?]]/g;
 
     // Recompute on newFileContent: the markdown pass may have shifted offsets.
-    const wikilinkCodeRanges = this.getCodeRanges(newFileContent);
+    const wikilinkProtectedRanges = this.getProtectedRanges(newFileContent);
 
     newFileContent = newFileContent.replace(
       wikilinkRegex,
       (match, linkPath, subheading, linkText, offset) => {
-        // Skip links inside fenced code blocks or inline code.
-        if (this.isInCode(offset, wikilinkCodeRanges)) {
+        // Skip links inside protected code regions.
+        if (this.isProtected(offset, wikilinkProtectedRanges)) {
           return match;
         }
 
@@ -213,27 +213,32 @@ export class LinkUpdater {
             const title = this.getPageTitle(linkedCache, linkedFile.path);
 
             if (linkText) {
+              const comparableLinkText = this.unescapeWikilinkDisplayText(linkText);
               // If the current link text matches the title exactly, don't try to find an alias
-              if (linkText === title) {
+              if (comparableLinkText === title) {
                 return match;
               }
               // Handle links with existing display text
               const aliases = this.getAliases(linkedCache);
-              const similarAlias = this.findMostSimilarAlias(linkText, aliases);
-              if (similarAlias && similarAlias !== linkText) {
+              const similarAlias = this.findMostSimilarAlias(comparableLinkText, aliases);
+              if (similarAlias && similarAlias !== comparableLinkText) {
                 updatedCount++;
-                return `[[${linkPath}|${similarAlias}]]`;
+                return `[[${linkPath}|${this.escapeWikilinkDisplayText(similarAlias)}]]`;
               }
-              if (!similarAlias && linkText !== title && this.hasExplicitTitle(linkedCache)) {
+              if (!similarAlias && comparableLinkText !== title && this.hasExplicitTitle(linkedCache)) {
                 updatedCount++;
-                return linkPath !== title ? `[[${linkPath}|${title}]]` : `[[${linkPath}]]`;
+                return linkPath !== title
+                  ? `[[${linkPath}|${this.escapeWikilinkDisplayText(title)}]]`
+                  : `[[${linkPath}]]`;
               }
             } else {
               // Handle links without display text
               const baseLinkName = linkPath.split('/').pop()?.replace(/\.md$/, '') || '';
               if (title && title !== baseLinkName) {
                 updatedCount++;
-                return linkPath !== title ? `[[${linkPath}|${title}]]` : `[[${linkPath}]]`;
+                return linkPath !== title
+                  ? `[[${linkPath}|${this.escapeWikilinkDisplayText(title)}]]`
+                  : `[[${linkPath}]]`;
               }
             }
           }
@@ -408,9 +413,9 @@ export class LinkUpdater {
     return 1 - (distance / maxLength);
   }
 
-  // Returns [start, end) offsets of fenced code blocks and inline code spans
-  // so link rewriting can skip them.
-  private getCodeRanges(content: string): Array<[number, number]> {
+  // Returns [start, end) offsets of code regions where link-looking text
+  // should not be rewritten.
+  private getProtectedRanges(content: string): Array<[number, number]> {
     const ranges: Array<[number, number]> = [];
 
     // Fenced code blocks (``` or ~~~). A fence closes only on a matching
@@ -418,38 +423,108 @@ export class LinkUpdater {
     // protects through to the end of the file.
     let fence: { char: string; length: number; start: number } | null = null;
     let offset = 0;
-    for (const line of content.split('\n')) {
-      const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    for (const rawLine of content.split('\n')) {
+      const line = rawLine.replace(/\r$/, '');
+      const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
       if (fenceMatch) {
         const char = fenceMatch[1][0];
         const length = fenceMatch[1].length;
-        if (!fence) {
+        const rest = fenceMatch[2];
+        if (!fence && (char !== '`' || !rest.includes('`'))) {
           fence = { char, length, start: offset };
-        } else if (char === fence.char && length >= fence.length) {
-          ranges.push([fence.start, offset + line.length]);
+        } else if (fence && char === fence.char && length >= fence.length && /^[ \t]*$/.test(rest)) {
+          ranges.push([fence.start, offset + rawLine.length]);
           fence = null;
         }
       }
-      offset += line.length + 1;
+      offset += rawLine.length + 1;
     }
     if (fence) {
       ranges.push([fence.start, content.length]);
     }
 
-    // Inline code spans: a run of backticks closed by a run of at least the
-    // same length on the same line. Spans inside fences are already covered;
-    // the extra overlapping ranges are harmless.
-    const inlineCodeRegex = /(`+)[^`\n]+?\1/g;
-    let inlineMatch: RegExpExecArray | null;
-    while ((inlineMatch = inlineCodeRegex.exec(content)) !== null) {
-      ranges.push([inlineMatch.index, inlineMatch.index + inlineMatch[0].length]);
+    // Inline code spans close on a backtick run of exactly the opening run's
+    // length. Their content may contain shorter or longer backtick runs.
+    let cursor = 0;
+    while (cursor < content.length) {
+      const protectedRange = ranges.find(([start, end]) => cursor >= start && cursor < end);
+      if (protectedRange) {
+        cursor = protectedRange[1];
+        continue;
+      }
+
+      if (content[cursor] !== '`') {
+        cursor++;
+        continue;
+      }
+
+      const openingStart = cursor;
+      while (content[cursor] === '`') {
+        cursor++;
+      }
+      const openingLength = cursor - openingStart;
+      let searchCursor = cursor;
+      let closingEnd: number | null = null;
+
+      while (searchCursor < content.length) {
+        const searchProtectedRange = ranges.find(
+          ([start, end]) => searchCursor >= start && searchCursor < end
+        );
+        if (searchProtectedRange) {
+          searchCursor = searchProtectedRange[1];
+          continue;
+        }
+
+        if (content[searchCursor] !== '`') {
+          searchCursor++;
+          continue;
+        }
+
+        const closingStart = searchCursor;
+        while (content[searchCursor] === '`') {
+          searchCursor++;
+        }
+        if (searchCursor - closingStart === openingLength) {
+          closingEnd = searchCursor;
+          break;
+        }
+      }
+
+      if (closingEnd !== null) {
+        ranges.push([openingStart, closingEnd]);
+        cursor = closingEnd;
+      }
     }
 
     return ranges;
   }
 
-  private isInCode(offset: number, codeRanges: Array<[number, number]>): boolean {
-    return codeRanges.some(([start, end]) => offset >= start && offset < end);
+  private isProtected(offset: number, ranges: Array<[number, number]>): boolean {
+    return ranges.some(([start, end]) => offset >= start && offset < end);
+  }
+
+  private escapeMarkdownLinkText(text: string): string {
+    return text.replace(/([\\[\]])/g, '\\$1');
+  }
+
+  private unescapeMarkdownLinkText(text: string): string {
+    return text.replace(/\\([\\[\]])/g, '$1');
+  }
+
+  private escapeWikilinkDisplayText(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/\[/g, '&#91;')
+      .replace(/\]/g, '&#93;')
+      .replace(/\|/g, '&#124;');
+  }
+
+  private unescapeWikilinkDisplayText(text: string): string {
+    return text
+      .replace(/&#91;/g, '[')
+      .replace(/&#93;/g, ']')
+      .replace(/&#124;/g, '|')
+      .replace(/&amp;/g, '&');
   }
 
   private stripLinkElements(text: string): string {

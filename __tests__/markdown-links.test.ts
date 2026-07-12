@@ -243,4 +243,74 @@ describe('LinkUpdater - Markdown links', () => {
     expect(updatedCount).toBe(0);
     expect(await vault.read(sourceFile)).toBe('Here is an image: ![Custom Alt Text](cool-img.jpg)');
   });
-}); 
+
+  it('should escape Markdown delimiters in title-derived link text', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': '[old](note2.md)',
+        'note2.md': 'Content'
+      },
+      {
+        'note1.md': { links: [], frontmatter: undefined } as CachedMetadata,
+        'note2.md': {
+          frontmatter: { title: 'API ] legacy' },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe('[API \\] legacy](note2.md)');
+  });
+
+  it('should update previously escaped Markdown link text when the title changes', async () => {
+    const targetMetadata = {
+      frontmatter: { title: 'API ] legacy' },
+      headings: [],
+      links: []
+    } as CachedMetadata;
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': '[old](note2.md)',
+        'note2.md': 'Content'
+      },
+      {
+        'note1.md': { links: [], frontmatter: undefined } as CachedMetadata,
+        'note2.md': targetMetadata
+      }
+    );
+
+    await linkUpdater.updateLinksInNote(sourceFile);
+    if (!targetMetadata.frontmatter) {
+      throw new Error('Expected target frontmatter');
+    }
+    targetMetadata.frontmatter.title = 'Modern ] API';
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe('[Modern \\] API](note2.md)');
+  });
+
+  it('should escape Markdown delimiters in alias-derived link text', async () => {
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': '[API legacy](note2.md)',
+        'note2.md': 'Content'
+      },
+      {
+        'note1.md': { links: [], frontmatter: undefined } as CachedMetadata,
+        'note2.md': {
+          frontmatter: { title: 'Other', aliases: ['API ] legacy'] },
+          headings: [],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe('[API \\] legacy](note2.md)');
+  });
+});

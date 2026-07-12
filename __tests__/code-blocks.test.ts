@@ -79,6 +79,32 @@ describe('LinkUpdater - Code blocks', () => {
     );
   });
 
+  it('should not update links inside inline code containing shorter backtick runs', async () => {
+    const content = 'Use ``code ` [link](note2.md) ` code`` here';
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      { 'note1.md': content, 'note2.md': '# Real Title' },
+      { 'note1.md': note1Metadata('[link](note2.md)'), 'note2.md': note2Metadata }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe(content);
+  });
+
+  it('should update wikilinks used as YAML frontmatter properties', async () => {
+    const content = '---\npeople: [[note2|Old Name]]\n---\nBody';
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      { 'note1.md': content, 'note2.md': '# Real Title' },
+      { 'note1.md': note1Metadata('[[note2|Old Name]]'), 'note2.md': note2Metadata }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(1);
+    expect(await vault.read(sourceFile)).toBe(
+      '---\npeople: [[note2|Real Title]]\n---\nBody'
+    );
+  });
+
   it('should protect everything after an unclosed fence', async () => {
     const content = '[link](note2.md)\n```\n[link](note2.md)\n[[note2]]';
     const { linkUpdater, sourceFile, vault } = setupTest(
