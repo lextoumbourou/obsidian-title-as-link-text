@@ -2,12 +2,16 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
-## [Unreleased]
+## [1.1.13] - ✨ Features & Bug Fixes
 
 - Add a `%%talt:ignore%%` directive and editor command for preserving one link's custom display text.
 - Add a `title-as-link-text-ignore` property supporting target-wide paths and exact target/display exclusions within a note.
 - Preserve contextual display text for heading and block links in both supported link formats.
 - Fill empty Markdown link labels from the page title without dropping heading or block destinations.
+- Escape title and alias characters that would otherwise produce malformed Markdown links or wikilinks.
+- Preserve valid inline code spans containing shorter backtick runs.
+- Fix the current-file command so it no longer updates backlinking notes.
+- Correct the minimum supported Obsidian version to 1.1.0, where `Vault.process` is available.
 
 ## [1.1.12] - 🐛 Bug Fixes & Performance
 
