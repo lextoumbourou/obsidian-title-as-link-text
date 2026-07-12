@@ -33,6 +33,7 @@ Title As Link Text is an [Obsidian](https://obsidian.md/) plugin that intelligen
   - Markdown: `[Note Title](./file-name.md)`
 
 - **Alias Support**: Respects your custom aliases with smart matching
+- **Per-Link Overrides**: Preserve intentional custom link text with a hidden comment directive or note property
 - **Automatic Updates**: Links update automatically when you save or rename files
 
 ## ⚠️ WARNING
@@ -73,6 +74,39 @@ Title As Link Text is available as a Community Plugin.
 - **Fuzzy Matching**: Finds close matches when no exact match exists
 - **Preserves Intentional Variations**: Respects your custom aliases
 
+### Preserve Custom Link Text
+
+To preserve one link's custom display text, add the ignore directive immediately
+after it. Horizontal whitespace between the link and directive is allowed.
+Obsidian hides the directive in Reading view.
+
+```markdown
+[[project-phoenix|the original proposal]]%%talt:ignore%%
+[the original proposal](project-phoenix.md) %%talt:ignore%%
+```
+
+You can also place the cursor inside a link and run
+`Toggle link text updates` from the Command palette. Run it again to
+remove the directive.
+
+To preserve every link to selected targets within a note, list those targets in
+the note's `title-as-link-text-ignore` property. Entries can be wikilinks,
+Markdown links, or link paths. Quote wikilinks when using them in properties.
+
+```yaml
+---
+title-as-link-text-ignore:
+  - "[[project-phoenix]]"
+  - "reference/design-notes"
+  - "[[project-orion|the fallback plan]]"
+---
+```
+
+A bare wikilink or link path excludes every link to that target within the
+note. An aliased wikilink excludes only that exact target and display text.
+Both forms match wikilinks and Markdown links in the article. Links to the same
+target in other notes are unaffected.
+
 ## 🤝 Recommended Companion Plugins
 
 For Markdown-style users:
@@ -103,6 +137,7 @@ Both title source options can be toggled independently. When disabled, the plugi
 
 - `Update all links`: One-click update for all existing links in your vault
 - `Update links for current file`: Update links only in the currently active note
+- `Toggle link text updates`: Add or remove `%%talt:ignore%%` for the link under the cursor
 
 ## 👩‍💻 Development
 

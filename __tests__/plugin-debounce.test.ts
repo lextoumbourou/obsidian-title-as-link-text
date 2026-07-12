@@ -1,10 +1,32 @@
 import TitleAsLinkTextPlugin from '../main';
 import { TFile } from 'obsidian';
+import type { Editor, EditorPosition } from 'obsidian';
 
 type EventHandler = (...args: unknown[]) => void;
 type Command = {
   id: string;
-  callback: () => void | Promise<void>;
+  callback?: () => void | Promise<void>;
+  editorCheckCallback?: (checking: boolean, editor: Editor) => boolean | void;
+};
+
+const createEditor = (initialLine: string, cursorCh: number) => {
+  let line = initialLine;
+  let cursor: EditorPosition = { line: 0, ch: cursorCh };
+  const replaceRange = jest.fn(
+    (replacement: string, from: EditorPosition, to: EditorPosition = from) => {
+      line = line.slice(0, from.ch) + replacement + line.slice(to.ch);
+    }
+  );
+  const editor = {
+    getCursor: () => cursor,
+    setCursor: (position: EditorPosition) => {
+      cursor = position;
+    },
+    getLine: () => line,
+    replaceRange
+  } as unknown as Editor;
+
+  return { editor, replaceRange, getLine: () => line };
 };
 
 const createFile = (path: string): TFile => {
@@ -125,9 +147,47 @@ describe('TitleAsLinkTextPlugin - debounced updates', () => {
     });
     await plugin.onload();
 
-    await commands['update-current-file-links'].callback();
+    const callback = commands['update-current-file-links'].callback;
+    if (!callback) {
+      throw new Error('Expected current-file command callback');
+    }
+    await callback();
 
     const readPaths = read.mock.calls.map(([file]) => (file as TFile).path);
     expect(readPaths).toEqual(['active.md']);
+  });
+
+  it.each([
+    ['wikilink', 'See [[person|Custom text]] today', 'Custom text', 'See [[person|Custom text]]%%talt:ignore%% today'],
+    ['Markdown link', 'See [Custom text](person.md) today', 'Custom text', 'See [Custom text](person.md)%%talt:ignore%% today']
+  ])('should toggle an ignore directive for a %s under the cursor', async (_name, line, cursorText, preservedLine) => {
+    const { plugin, commands } = createPlugin();
+    await plugin.onload();
+    const { editor, getLine } = createEditor(line, line.indexOf(cursorText) + 2);
+    const toggle = commands['toggle-link-text-updates'].editorCheckCallback;
+    if (!toggle) {
+      throw new Error('Expected toggle command editor callback');
+    }
+
+    expect(toggle(true, editor)).toBe(true);
+    expect(toggle(false, editor)).toBe(true);
+    expect(getLine()).toBe(preservedLine);
+
+    expect(toggle(false, editor)).toBe(true);
+    expect(getLine()).toBe(line);
+  });
+
+  it('should disable the toggle command when the cursor is not in a link', async () => {
+    const { plugin, commands } = createPlugin();
+    await plugin.onload();
+    const { editor, replaceRange } = createEditor('No link here', 3);
+    const toggle = commands['toggle-link-text-updates'].editorCheckCallback;
+    if (!toggle) {
+      throw new Error('Expected toggle command editor callback');
+    }
+
+    expect(toggle(true, editor)).toBe(false);
+    expect(toggle(false, editor)).toBe(false);
+    expect(replaceRange).not.toHaveBeenCalled();
   });
 });

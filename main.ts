@@ -38,6 +38,15 @@ const DEFAULT_SETTINGS: Partial<TitleAsLinkTextSettings> = {
   autoUpdate: true
 };
 
+const IGNORE_LINK_TEXT_MARKER = '%%talt:ignore%%';
+const IGNORE_LINK_TEXT_DIRECTIVE = /^[ \t]*%%[ \t]*talt:ignore[ \t]*%%/;
+const LINK_EXCLUSION_PROPERTY = 'title-as-link-text-ignore';
+
+interface LinkExclusions {
+  allTargetPaths: Set<string>;
+  displayTextByTargetPath: Map<string, Set<string>>;
+}
+
 export class LinkUpdater {
   private settings: TitleAsLinkTextSettings;
 
@@ -94,11 +103,12 @@ export class LinkUpdater {
     sourcePath: string
   ): { content: string; count: number } {
     let updatedCount = 0;
+    const linkExclusions = this.getLinkExclusions(sourcePath);
 
     // Markdown link regex breakdown:
     // \[                     - Match opening square bracket
-    // ((?:\\[^\n]|[^\]\\[\n])+) - Group 1: Match link text, including
-    //                                backslash-escaped delimiters
+    // ((?:\\[^\n]|[^\]\\[\n])*) - Group 1: Match optional link text,
+    //                                including backslash-escaped delimiters
     // \]                     - Match closing square bracket
     // \(                     - Match opening parenthesis
     // ([^)\n]+)             - Group 2: Match URL/path
@@ -106,7 +116,7 @@ export class LinkUpdater {
     //                         + = one or more (greedy)
     // \)                     - Match closing parenthesis
     // g                      - Global flag: match all occurrences
-    const markdownLinkRegex = /\[((?:\\[^\n]|[^\]\\[\n])+)\]\(([^)\n]+)\)/g;
+    const markdownLinkRegex = /\[((?:\\[^\n]|[^\]\\[\n])*)\]\(([^)\n]+)\)/g;
 
     const markdownProtectedRanges = this.getProtectedRanges(fileContent);
 
@@ -115,6 +125,15 @@ export class LinkUpdater {
       (match, linkText, linkUrl, offset) => {
         // Skip links inside protected code regions.
         if (this.isProtected(offset, markdownProtectedRanges)) {
+          return match;
+        }
+
+        // Image alt text is not link display text.
+        if (offset > 0 && fileContent[offset - 1] === '!') {
+          return match;
+        }
+
+        if (this.hasIgnoreDirective(fileContent, offset + match.length)) {
           return match;
         }
 
@@ -131,8 +150,13 @@ export class LinkUpdater {
         } catch {
           linkUrlDecoded = linkUrl;
         }
-        // Remove any #subheading from the link before looking up the file
+        const hasSubpath = linkUrlDecoded.includes('#');
         const baseLinkUrl = linkUrlDecoded.split('#')[0];
+        // Preserve contextual display text for heading and block links, but
+        // allow an empty label to be repaired with the page title.
+        if (hasSubpath && linkText !== '') {
+          return match;
+        }
 
         // If it's not a link to a file, don't update it.
         if (baseLinkUrl == '') {
@@ -141,10 +165,18 @@ export class LinkUpdater {
 
         const linkedFile = this.metadataCache.getFirstLinkpathDest(baseLinkUrl, sourcePath);
         if (linkedFile && linkedFile.name.endsWith('.md')) {
+          const comparableLinkText = this.unescapeMarkdownLinkText(linkText);
+          if (this.isLinkExcluded(linkExclusions, linkedFile.path, comparableLinkText)) {
+            return match;
+          }
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const title = this.getPageTitle(linkedCache, linkedFile.path);
-            const comparableLinkText = this.unescapeMarkdownLinkText(linkText);
+
+            if (comparableLinkText === '') {
+              updatedCount++;
+              return `[${this.escapeMarkdownLinkText(title)}](${linkUrl})`;
+            }
 
             // If the current link text matches the title exactly, don't try to find an alias
             if (comparableLinkText === title) {
@@ -201,31 +233,41 @@ export class LinkUpdater {
           return match;
         }
 
+        if (this.hasIgnoreDirective(newFileContent, offset + match.length)) {
+          return match;
+        }
+
         // Skip links with subheadings/anchors (e.g., [[Page#Header]], [[Page#^quote]])
-        if (subheading) {
+        if (subheading || linkPath.startsWith('#')) {
           return match;
         }
 
         const linkedFile = this.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
         if (linkedFile) {
+          const comparableLinkText = linkText
+            ? this.unescapeWikilinkDisplayText(linkText)
+            : null;
+          if (this.isLinkExcluded(linkExclusions, linkedFile.path, comparableLinkText)) {
+            return match;
+          }
           const linkedCache = this.metadataCache.getFileCache(linkedFile);
           if (linkedCache) {
             const title = this.getPageTitle(linkedCache, linkedFile.path);
 
             if (linkText) {
-              const comparableLinkText = this.unescapeWikilinkDisplayText(linkText);
+              const currentDisplayText = comparableLinkText || '';
               // If the current link text matches the title exactly, don't try to find an alias
-              if (comparableLinkText === title) {
+              if (currentDisplayText === title) {
                 return match;
               }
               // Handle links with existing display text
               const aliases = this.getAliases(linkedCache);
-              const similarAlias = this.findMostSimilarAlias(comparableLinkText, aliases);
-              if (similarAlias && similarAlias !== comparableLinkText) {
+              const similarAlias = this.findMostSimilarAlias(currentDisplayText, aliases);
+              if (similarAlias && similarAlias !== currentDisplayText) {
                 updatedCount++;
                 return `[[${linkPath}|${this.escapeWikilinkDisplayText(similarAlias)}]]`;
               }
-              if (!similarAlias && comparableLinkText !== title && this.hasExplicitTitle(linkedCache)) {
+              if (!similarAlias && currentDisplayText !== title && this.hasExplicitTitle(linkedCache)) {
                 updatedCount++;
                 return linkPath !== title
                   ? `[[${linkPath}|${this.escapeWikilinkDisplayText(title)}]]`
@@ -503,6 +545,101 @@ export class LinkUpdater {
     return ranges.some(([start, end]) => offset >= start && offset < end);
   }
 
+  private hasIgnoreDirective(content: string, linkEnd: number): boolean {
+    return IGNORE_LINK_TEXT_DIRECTIVE.test(content.slice(linkEnd));
+  }
+
+  private getLinkExclusions(sourcePath: string): LinkExclusions {
+    const sourceCache = this.metadataCache.getCache(sourcePath);
+    const configuredExclusions = sourceCache?.frontmatter?.[LINK_EXCLUSION_PROPERTY];
+    const exclusions = Array.isArray(configuredExclusions)
+      ? configuredExclusions
+      : configuredExclusions == null
+        ? []
+        : [configuredExclusions];
+    const linkExclusions: LinkExclusions = {
+      allTargetPaths: new Set<string>(),
+      displayTextByTargetPath: new Map<string, Set<string>>()
+    };
+
+    for (const exclusion of exclusions) {
+      if (typeof exclusion !== 'string') {
+        continue;
+      }
+
+      const parsedExclusion = this.parseLinkExclusion(exclusion);
+      if (!parsedExclusion.linkPath) {
+        continue;
+      }
+
+      const target = this.metadataCache.getFirstLinkpathDest(
+        parsedExclusion.linkPath,
+        sourcePath
+      );
+      if (target) {
+        if (parsedExclusion.displayText === null) {
+          linkExclusions.allTargetPaths.add(target.path);
+        } else {
+          const displayTexts = linkExclusions.displayTextByTargetPath.get(target.path)
+            || new Set<string>();
+          displayTexts.add(parsedExclusion.displayText);
+          linkExclusions.displayTextByTargetPath.set(target.path, displayTexts);
+        }
+      }
+    }
+
+    return linkExclusions;
+  }
+
+  private parseLinkExclusion(
+    exclusion: string
+  ): { linkPath: string; displayText: string | null } {
+    const trimmed = exclusion.trim();
+    const wikilink = trimmed.match(/^\[\[([^\]]+)]]$/);
+    if (wikilink) {
+      const separatorIndex = wikilink[1].indexOf('|');
+      const destination = separatorIndex === -1
+        ? wikilink[1]
+        : wikilink[1].slice(0, separatorIndex);
+      const displayText = separatorIndex === -1
+        ? null
+        : this.unescapeWikilinkDisplayText(wikilink[1].slice(separatorIndex + 1));
+      return {
+        linkPath: destination.split('#')[0].trim(),
+        displayText
+      };
+    }
+
+    const markdownLink = trimmed.match(
+      /^\[((?:\\[^\n]|[^\]\\[\n])*)]\(([^)]+)\)$/
+    );
+    const destination = markdownLink ? markdownLink[2] : trimmed;
+    let decodedDestination: string;
+    try {
+      decodedDestination = decodeURIComponent(destination);
+    } catch {
+      decodedDestination = destination;
+    }
+    return {
+      linkPath: decodedDestination.split('#')[0].trim(),
+      displayText: markdownLink
+        ? this.unescapeMarkdownLinkText(markdownLink[1])
+        : null
+    };
+  }
+
+  private isLinkExcluded(
+    exclusions: LinkExclusions,
+    targetPath: string,
+    displayText: string | null
+  ): boolean {
+    if (exclusions.allTargetPaths.has(targetPath)) {
+      return true;
+    }
+    return displayText !== null
+      && !!exclusions.displayTextByTargetPath.get(targetPath)?.has(displayText);
+  }
+
   private escapeMarkdownLinkText(text: string): string {
     return text.replace(/([\\[\]])/g, '\\$1');
   }
@@ -597,7 +734,65 @@ export default class TitleAsLinkTextPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'toggle-link-text-updates',
+      name: 'Toggle link text updates',
+      editorCheckCallback: (checking, editor) => {
+        const cursor = editor.getCursor();
+        const line = editor.getLine(cursor.line);
+        const linkRange = this.findLinkRangeAtCursor(line, cursor.ch);
+        if (!linkRange) {
+          return false;
+        }
+
+        if (!checking) {
+          const suffix = line.slice(linkRange.end);
+          const existingDirective = suffix.match(IGNORE_LINK_TEXT_DIRECTIVE);
+          if (existingDirective) {
+            const directiveStart = linkRange.end + existingDirective[0].indexOf('%%');
+            const directiveEnd = linkRange.end + existingDirective[0].length;
+            editor.replaceRange(
+              '',
+              { line: cursor.line, ch: directiveStart },
+              { line: cursor.line, ch: directiveEnd }
+            );
+          } else {
+            editor.replaceRange(
+              IGNORE_LINK_TEXT_MARKER,
+              { line: cursor.line, ch: linkRange.end }
+            );
+          }
+          editor.setCursor(cursor);
+        }
+
+        return true;
+      }
+    });
+
     this.addSettingTab(new TitleAsLinkTextSettingTab(this.app, this));
+  }
+
+  private findLinkRangeAtCursor(
+    line: string,
+    cursorCh: number
+  ): { start: number; end: number } | null {
+    const linkPatterns = [
+      /\[\[[^\][\n]+?]]/g,
+      /\[((?:\\[^\n]|[^\]\\[\n])+)\]\(([^)\n]+)\)/g
+    ];
+
+    for (const pattern of linkPatterns) {
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(line)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (cursorCh >= start && cursorCh <= end) {
+          return { start, end };
+        }
+      }
+    }
+
+    return null;
   }
 
   onunload() {

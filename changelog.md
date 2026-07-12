@@ -2,6 +2,13 @@
 
 All notable changes to the Title As Link Text plugin will be documented in this file.
 
+## [Unreleased]
+
+- Add a `%%talt:ignore%%` directive and editor command for preserving one link's custom display text.
+- Add a `title-as-link-text-ignore` property supporting target-wide paths and exact target/display exclusions within a note.
+- Preserve contextual display text for heading and block links in both supported link formats.
+- Fill empty Markdown link labels from the page title without dropping heading or block destinations.
+
 ## [1.1.12] - 🐛 Bug Fixes & Performance
 
 - **Bug fix**: Note updates are now written atomically via `Vault.process`, so edits made while an update is in flight are no longer overwritten.

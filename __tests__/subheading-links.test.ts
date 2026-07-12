@@ -92,4 +92,81 @@ describe('LinkUpdater - Subheading links', () => {
     expect(updatedCount).toBe(0);
     expect(await vault.read(sourceFile)).toBe('Here is a [[note2#^quote|old text]]');
   });
+
+  it('should not update Markdown links to headings or blocks in another note', async () => {
+    const content = [
+      '[Custom heading](note2.md#My%20Heading)',
+      '[Custom block](note2.md#^quote)'
+    ].join('\n');
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': content,
+        'note2.md': '# Page title\n\n## My Heading\n\nQuote ^quote'
+      },
+      {
+        'note1.md': { frontmatter: undefined, links: [] } as CachedMetadata,
+        'note2.md': {
+          frontmatter: { title: 'Page Title' },
+          headings: [{ heading: 'My Heading', level: 2 } as HeadingCache],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe(content);
+  });
+
+  it('should not update same-note wikilinks to headings or blocks', async () => {
+    const content = [
+      '[[#My Heading|Custom heading]]',
+      '[[#^quote|Custom block]]'
+    ].join('\n');
+    const { linkUpdater, sourceFile, vault, metadataCache } = setupTest(
+      { 'note1.md': content },
+      {
+        'note1.md': {
+          frontmatter: { title: 'Page Title' },
+          headings: [{ heading: 'My Heading', level: 2 } as HeadingCache],
+          links: []
+        } as CachedMetadata
+      }
+    );
+    metadataCache.getFirstLinkpathDest.mockImplementation((linkPath: string) => {
+      return linkPath.startsWith('#') ? sourceFile : null;
+    });
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(0);
+    expect(await vault.read(sourceFile)).toBe(content);
+  });
+
+  it('should fill empty Markdown labels without dropping heading or block destinations', async () => {
+    const content = [
+      '[](note2.md#My%20Heading)',
+      '[](note2.md#^test-here)'
+    ].join('\n');
+    const { linkUpdater, sourceFile, vault } = setupTest(
+      {
+        'note1.md': content,
+        'note2.md': '# Page title\n\n## My Heading\n\nBlock ^test-here'
+      },
+      {
+        'note1.md': { frontmatter: undefined, links: [] } as CachedMetadata,
+        'note2.md': {
+          frontmatter: { title: 'Page Title' },
+          headings: [{ heading: 'My Heading', level: 2 } as HeadingCache],
+          links: []
+        } as CachedMetadata
+      }
+    );
+
+    const updatedCount = await linkUpdater.updateLinksInNote(sourceFile);
+    expect(updatedCount).toBe(2);
+    expect(await vault.read(sourceFile)).toBe([
+      '[Page Title](note2.md#My%20Heading)',
+      '[Page Title](note2.md#^test-here)'
+    ].join('\n'));
+  });
 });
