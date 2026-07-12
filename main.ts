@@ -587,9 +587,9 @@ export default class TitleAsLinkTextPlugin extends Plugin {
       callback: async () => {
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile && activeFile.extension === 'md') {
-          const backLinks = await this.linkUpdater.updateBackLinks(activeFile, activeFile.path, false);
-          if (backLinks) {
-            new Notice(`Updated the link text of ${backLinks} Markdown link(s) in the current file.`);
+          const count = await this.linkUpdater.updateLinksInNote(activeFile);
+          if (count) {
+            new Notice(`Updated the link text of ${count} Markdown link(s) in the current file.`);
           }
         } else {
           new Notice('No active markdown file found.');
